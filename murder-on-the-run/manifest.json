@@ -1,0 +1,17 @@
+{
+  "name": "Murder on the Run",
+  "short_name": "Murder Run",
+  "description": "An audio-first detective mystery, played on the move. Solve a murder while you run.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#efe4c6",
+  "theme_color": "#2b1518",
+  "categories": ["games", "entertainment", "health"],
+  "icons": [
+    { "src": "icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}
