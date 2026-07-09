@@ -269,10 +269,31 @@ html,body{height:100%;background:var(--ink);color:var(--parchment);font-family:v
 .record-bar:hover{border-color:#b8901a;background:#f7f0dd}
 .record-bar span:first-child{font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#7a1e1e;font-size:13px}
 .record-bar span:last-child{color:#6a5638;font-size:13px}
+/* NARRATION BUTTON */
+#nar-btn{position:fixed;top:10px;right:54px;z-index:500;background:rgba(14,11,15,.7);border:1px solid rgba(212,170,26,.2);color:var(--mist);font-size:16px;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+#nar-btn:hover{border-color:var(--gold);color:var(--gold)}
+#nar-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(212,170,26,.12)}
+/* RUN STATS on ending */
+.end-stats{display:flex;gap:10px;justify-content:center;width:100%;max-width:420px;margin-bottom:22px}
+.end-stat{flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(212,170,26,.2);border-radius:8px;padding:13px 6px;text-align:center}
+.end-stat-val{font-family:var(--sans);font-size:20px;font-weight:700;color:var(--gold);line-height:1}
+.end-stat-lbl{font-family:var(--sans);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--smoke);margin-top:5px}
+/* RESUME CARD */
+.resume-card{width:100%;background:#f4ecd6;border:2px solid #b8901a;border-radius:11px;padding:14px 16px;margin:0 0 14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .18s;box-shadow:0 3px 12px rgba(184,144,26,.15);animation:fadeUp .35s ease;text-align:left}
+.resume-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(184,144,26,.25)}
+.resume-ico{font-size:26px;flex-shrink:0}
+.resume-info{flex:1}
+.resume-label{font-family:var(--sans);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#7a1e1e;margin-bottom:3px}
+.resume-title{font-family:var(--serif);font-size:17px;font-weight:700;color:#2b2018;line-height:1.15;margin-bottom:2px}
+.resume-meta{font-family:var(--sans);font-size:11px;color:#6a5638}
+/* SHARE BUTTON */
+.btn-share{display:block;width:calc(100% - 28px);margin:0 14px 12px;font-family:var(--sans);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);background:transparent;border:1px solid var(--teal);padding:14px;cursor:pointer;transition:all .2s;border-radius:6px}
+.btn-share:hover{background:rgba(42,144,144,.1)}
 </style>
 </head>
 <body>
 <div id="app">
+<button id="nar-btn" onclick="toggleNarrate()" title="Read scenes aloud">🔈</button>
 <button id="snd-btn" onclick="toggleSound()">🔊</button>
 
 <div id="screen-home" class="screen active">
@@ -302,6 +323,7 @@ html,body{height:100%;background:var(--ink);color:var(--parchment);font-family:v
       </div>
     </div>
 
+    <div id="resume-slot"></div>
     <div class="begin-div"><span>Begin Investigation</span></div>
     <div class="pcases" id="cases-list"></div>
 
@@ -491,6 +513,115 @@ function startAmbient(mood){
 function stopAmbient(){
   ambNodes.forEach(n=>{try{n.stop?n.stop():n.gain&&n.gain.setTargetAtTime(0,AC.currentTime,.5)}catch(e){}});
   ambNodes=[];
+}
+
+// ════════════════════════════════════════════════
+// HAPTICS
+// ════════════════════════════════════════════════
+function haptic(pattern){try{if(navigator.vibrate)navigator.vibrate(pattern);}catch(e){}}
+
+// ════════════════════════════════════════════════
+// NARRATION (Web Speech API)
+// ════════════════════════════════════════════════
+let narrateOn=false;
+const SYNTH=window.speechSynthesis;
+
+function toggleNarrate(){
+  narrateOn=!narrateOn;
+  const btn=document.getElementById('nar-btn');
+  if(btn){btn.textContent=narrateOn?'🎙️':'🔈';btn.classList.toggle('active',narrateOn);}
+  if(!narrateOn&&SYNTH)SYNTH.cancel();
+}
+
+function stopNarrate(){if(SYNTH)SYNTH.cancel();}
+
+function getNarrateVoice(){
+  const v=SYNTH?SYNTH.getVoices():[];
+  return v.find(x=>x.lang==='en-GB'&&/daniel|kate|oliver/i.test(x.name))
+      ||v.find(x=>x.lang==='en-GB')
+      ||v.find(x=>x.lang.startsWith('en'))
+      ||null;
+}
+
+function narrateScene(scene){
+  if(!narrateOn||!SYNTH)return;
+  SYNTH.cancel();
+  const cd=CASES[G.currentCase];
+  const parts=[];
+  scene.text.forEach(b=>{
+    if(b.t==='p')parts.push(b.c.replace(/<[^>]+>/g,''));
+    else if(b.t==='sp')parts.push(b.c+' said:');
+    else if(b.t==='q')parts.push('"'+b.c+'"');
+    else if(b.t==='clue'){const cl=cd&&cd.clues[b.id];if(cl)parts.push('Evidence collected: '+cl.name+'. '+cl.desc);}
+  });
+  const utt=new SpeechSynthesisUtterance(parts.join(' '));
+  utt.rate=0.9;utt.pitch=1.0;
+  const speak=()=>{const vo=getNarrateVoice();if(vo)utt.voice=vo;SYNTH.speak(utt);};
+  if(SYNTH.getVoices().length===0){SYNTH.addEventListener('voiceschanged',speak,{once:true});}
+  else{speak();}
+}
+
+// ════════════════════════════════════════════════
+// PROGRESS SAVE / RESUME
+// ════════════════════════════════════════════════
+function saveProgress(){
+  if(!G.currentCase||!G.currentScene)return;
+  const cd=CASES[G.currentCase];if(!cd)return;
+  const suspects={};
+  Object.entries(cd.suspects).forEach(([id,s])=>{suspects[id]={suspicion:s.suspicion,secretOn:s.secretOn};});
+  try{localStorage.setItem('motr2-prog',JSON.stringify({
+    currentCase:G.currentCase,currentScene:G.currentScene,
+    collectedClues:G.collectedClues,visitedScenes:G.visitedScenes,
+    mode:G.mode,links:G.links,boardRevealed:G.boardRevealed,
+    suspects,runStart:G.runStart,distanceM:G.distanceM
+  }));}catch(e){}
+}
+
+function clearProgress(){try{localStorage.removeItem('motr2-prog');}catch(e){}}
+
+function loadProgress(){try{const s=localStorage.getItem('motr2-prog');return s?JSON.parse(s):null;}catch(e){return null;}}
+
+function resumeCase(prog){
+  resumeAC();
+  const cd=CASES[prog.currentCase];if(!cd)return;
+  G.mode=prog.mode||'investigation';
+  G.currentCase=prog.currentCase;G.collectedClues=prog.collectedClues||[];G.visitedScenes=prog.visitedScenes||[];
+  G.accusedSuspect=null;G.accusedMotive=null;G.caseWrong=false;
+  G.links=prog.links||{};G.boardRevealed=prog.boardRevealed||false;boardSel=null;
+  G.runStart=prog.runStart||Date.now();G.distanceM=prog.distanceM||0;
+  Object.values(cd.suspects).forEach(s=>{if(s.sus0===undefined)s.sus0=s.suspicion;});
+  if(prog.suspects)Object.entries(prog.suspects).forEach(([id,s])=>{if(cd.suspects[id]){cd.suspects[id].suspicion=s.suspicion;cd.suspects[id].secretOn=s.secretOn;}});
+  document.getElementById('clue-count').textContent=G.collectedClues.length;
+  document.getElementById('hud-case-lbl').textContent=cd.subtitle;
+  const hm=document.getElementById('hud-mode');if(hm)hm.textContent=G.mode==='pursuit'?'🏃 Pursuit':'🚶 Investigation';
+  if(G.mode==='pursuit')startPace();else stopPace();
+  showPanel('run');startAmbient(cd.ambient);startFootsteps(G.mode==='pursuit'?330:520);
+  loadScene(prog.currentScene);
+}
+
+// ════════════════════════════════════════════════
+// RUN STATS
+// ════════════════════════════════════════════════
+function runStats(){
+  const elapsed=G.runStart?Math.floor((Date.now()-G.runStart)/1000):0;
+  const m=Math.floor(elapsed/60),s=elapsed%60;
+  const timeStr=m>0?m+'m\u202f'+String(s).padStart(2,'0')+'s':(elapsed>0?elapsed+'s':'—');
+  const mi=G.distanceM/1609.34;
+  const distStr=G.distanceM>80?mi.toFixed(1)+' mi':'—';
+  const cd=CASES[G.currentCase];
+  const total=cd?Object.keys(cd.clues).length:0;
+  return{timeStr,distStr,clueStr:G.collectedClues.length+'/'+total};
+}
+
+// ════════════════════════════════════════════════
+// SHARE
+// ════════════════════════════════════════════════
+function shareResult(){
+  const cd=CASES[G.currentCase];if(!cd)return;
+  const st=runStats();
+  const txt='Case solved! \u201c'+cd.title+'\u201d \u2014 '+st.timeStr+' \u00b7 '+st.clueStr+' clues \u00b7 Murder on the Run \ud83d\udd0d';
+  if(navigator.share){navigator.share({title:'Murder on the Run',text:txt,url:location.href}).catch(()=>{});}
+  else if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>showToast('Copied to clipboard')).catch(()=>showToast('Share unavailable'));}
 }
 
 // ════════════════════════════════════════════════
@@ -983,8 +1114,11 @@ const CASES={ashwick:CASE1,dunmore:CASE2};
 // ════════════════════════════════════════════════
 // GAME STATE
 // ════════════════════════════════════════════════
-let G={currentCase:null,currentScene:null,collectedClues:[],visitedScenes:[],accusedSuspect:null,accusedMotive:null,solvedCases:[],meta:{totalSolved:0,weekKey:'',weekCount:0,achievements:{}},mode:'investigation',caseWrong:false,links:{},boardRevealed:false};
-let advTimer=null,advSecs=0,boardSel=null;
+let G={currentCase:null,currentScene:null,collectedClues:[],visitedScenes:[],accusedSuspect:null,accusedMotive:null,solvedCases:[],meta:{totalSolved:0,weekKey:'',weekCount:0,achievements:{}},mode:'investigation',caseWrong:false,links:{},boardRevealed:false,runStart:null,distanceM:0};
+let advTimer=null,advSecs=0,advTotal=0,boardSel=null;
+// live-pace state for GPS-linked Pursuit
+G.pace={active:false,effort:1,speed:0,samples:[],watchId:null,lastPos:null};
+const REF_SPEED=2.4, EFF_MIN=0.4, EFF_MAX=1.8; // m/s reference jog; effort clamp
 
 const ACHIEVEMENTS=[
   {id:'first',name:'First Blood',icon:'🩸',desc:'Solve your first case.'},
@@ -1050,6 +1184,8 @@ function renderHome(){
   const disp=[{icon:'📍',cls:'navy',sub:'A locked-room mystery'},{icon:'▶',cls:'maroon',sub:'A poisoning at the party'}];
   const list=document.getElementById('cases-list');
   list.innerHTML='';
+  const rs=document.getElementById('resume-slot');
+  if(rs){rs.innerHTML='';const prog=loadProgress();if(prog&&prog.currentCase&&prog.currentScene&&CASES[prog.currentCase]){const pc=CASES[prog.currentCase];const elapsed=prog.runStart?Math.floor((Date.now()-prog.runStart)/60000):0;const rc2=document.createElement('button');rc2.className='resume-card';rc2.innerHTML=`<span class="resume-ico">▶️</span><div class="resume-info"><div class="resume-label">Case In Progress</div><div class="resume-title">${pc.title}</div><div class="resume-meta">${prog.collectedClues.length} clue${prog.collectedClues.length!==1?'s':''} collected · ${elapsed>0?elapsed+'m elapsed':'Just started'}</div></div><span style="color:#b8901a;font-size:22px">›</span>`;rc2.onclick=()=>resumeCase(prog);rs.appendChild(rc2);}}
   [CASE1,CASE2].forEach((c,i)=>{
     const solved=G.solvedCases.includes(c.id);
     const locked=i===1&&!G.solvedCases.includes(CASE1.id);
@@ -1090,6 +1226,7 @@ function startCase(caseId,mode){
   G.mode=mode||'investigation';
   G.currentCase=caseId;G.collectedClues=[];G.visitedScenes=[];G.accusedSuspect=null;G.accusedMotive=null;
   G.caseWrong=false;G.links={};G.boardRevealed=false;boardSel=null;
+  G.runStart=Date.now();G.distanceM=0;
   const cd=CASES[caseId];
   Object.values(cd.suspects).forEach(s=>{if(s.sus0===undefined)s.sus0=s.suspicion;s.suspicion=s.sus0;s.secretOn=false;});
   document.getElementById('clue-count').textContent='0';
@@ -1097,6 +1234,7 @@ function startCase(caseId,mode){
   const pursuit=G.mode==='pursuit';
   const hm=document.getElementById('hud-mode');
   if(hm)hm.textContent=pursuit?'🏃 Pursuit':'🚶 Investigation';
+  if(pursuit)startPace(); else stopPace();
   showPanel('run');
   startAmbient(cd.ambient);
   startFootsteps(pursuit?330:520);
@@ -1131,7 +1269,7 @@ function loadScene(sceneId){
       if(!G.collectedClues.includes(cid)){
         G.collectedClues.push(cid);
         showToast(cd.clues[cid].name);
-        sfxChime();
+        sfxChime();haptic([40,20,80,20,40]);
       }
     });
     document.getElementById('clue-count').textContent=G.collectedClues.length;
@@ -1157,6 +1295,7 @@ function loadScene(sceneId){
       content.appendChild(card);
     }
   });
+  saveProgress();narrateScene(scene);
   content.scrollTop=0;
 
   const wrap=document.getElementById('choices-wrap');
@@ -1165,7 +1304,7 @@ function loadScene(sceneId){
   valid.forEach(choice=>{
     const btn=document.createElement('button');btn.className='choice-big';
     btn.innerHTML=`<span class="carrow">›</span><span>${choice.tag?`<span class="ctag">${choice.tag}</span>`:''}${choice.text}</span>`;
-    btn.addEventListener('click',()=>{sfxTick();stopAdv();choice.next==='accuse'?showPanel('accuse'):loadScene(choice.next);});
+    btn.addEventListener('click',()=>{stopNarrate();sfxTick();stopAdv();choice.next==='accuse'?showPanel('accuse'):loadScene(choice.next);});
     wrap.appendChild(btn);
   });
 
@@ -1179,12 +1318,59 @@ function loadScene(sceneId){
 // ════════════════════════════════════════════════
 // AUTO-ADVANCE
 // ════════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// LIVE PACE (GPS-linked Pursuit)
+// ════════════════════════════════════════════════
+function currentEffort(){return (G.mode==='pursuit'&&G.pace&&G.pace.active)?G.pace.effort:1;}
+function haversine(la1,lo1,la2,lo2){const R=6371000,t=x=>x*Math.PI/180;const dla=t(la2-la1),dlo=t(lo2-lo1);const a=Math.sin(dla/2)**2+Math.cos(t(la1))*Math.cos(t(la2))*Math.sin(dlo/2)**2;return 2*R*Math.asin(Math.sqrt(a));}
+function startPace(){
+  if(!('geolocation'in navigator))return;
+  stopPace();
+  G.pace={active:false,effort:1,speed:0,samples:[],watchId:null,lastPos:null};
+  try{G.pace.watchId=navigator.geolocation.watchPosition(onPos,onPosErr,{enableHighAccuracy:true,maximumAge:1000,timeout:9000});}catch(e){}
+}
+function stopPace(){
+  if(G.pace&&G.pace.watchId!=null){try{navigator.geolocation.clearWatch(G.pace.watchId);}catch(e){}}
+  if(G.pace){G.pace.watchId=null;G.pace.active=false;G.pace.effort=1;}
+}
+function onPos(p){
+  let spd=p.coords.speed;
+  if(G.pace.lastPos){
+    const d=haversine(G.pace.lastPos.lat,G.pace.lastPos.lng,p.coords.latitude,p.coords.longitude);
+    const dt=(p.timestamp-G.pace.lastPos.t)/1000;
+    if(dt>0){if(spd==null||isNaN(spd))spd=d/dt;if(d<200)G.distanceM+=d;}
+  }
+  G.pace.lastPos={lat:p.coords.latitude,lng:p.coords.longitude,t:p.timestamp};
+  if(spd==null||isNaN(spd)||spd<0)spd=0;
+  G.pace.samples.push(spd);if(G.pace.samples.length>4)G.pace.samples.shift();
+  const avg=G.pace.samples.reduce((a,b)=>a+b,0)/G.pace.samples.length;
+  G.pace.speed=avg;
+  G.pace.effort=Math.max(EFF_MIN,Math.min(EFF_MAX,avg/REF_SPEED));
+  G.pace.active=true;
+  updatePaceHud();
+}
+function onPosErr(e){if(G.pace){G.pace.active=false;G.pace.effort=1;}updatePaceHud();}
+function paceStr(){if(!G.pace.active||G.pace.speed<0.45)return null;const perMi=(1609.34/G.pace.speed)/60;const m=Math.floor(perMi);let s=Math.round((perMi-m)*60);let mm=m;if(s===60){s=0;mm++;}return mm+':'+String(s).padStart(2,'0')+' /mi';}
+function updatePaceHud(){
+  const hm=document.getElementById('hud-mode');if(!hm)return;
+  if(G.mode==='pursuit'){const ps=paceStr();hm.textContent=ps?('🏃 '+ps):(G.pace.active?'🏃 Pursuit · pick up the pace':'🏃 Pursuit');}
+  else hm.textContent='🚶 Investigation';
+}
+
+
 function startAdv(secs,cb){
-  stopAdv();advSecs=secs;
+  stopAdv();advTotal=secs;advSecs=secs;
   const wrap=document.getElementById('adv-wrap'),fill=document.getElementById('adv-fill'),secsEl=document.getElementById('adv-secs');
-  wrap.classList.add('vis');fill.style.transition='none';fill.style.width='100%';secsEl.textContent=advSecs;
-  setTimeout(()=>{fill.style.transition=`width ${secs}s linear`;fill.style.width='0%';},50);
-  advTimer=setInterval(()=>{advSecs--;secsEl.textContent=advSecs;if(advSecs<=0){stopAdv();cb();}},1000);
+  wrap.classList.add('vis');fill.style.transition='width .25s linear';fill.style.width='100%';
+  secsEl.textContent=Math.max(1,Math.ceil(advSecs/Math.max(0.3,currentEffort())));
+  const dt=0.25;
+  advTimer=setInterval(()=>{
+    advSecs-=currentEffort()*dt;
+    if(advSecs<0)advSecs=0;
+    fill.style.width=(advSecs/advTotal*100)+'%';
+    secsEl.textContent=Math.max(0,Math.ceil(advSecs/Math.max(0.3,currentEffort())));
+    if(advSecs<=0){stopAdv();cb();}
+  },dt*1000);
 }
 function stopAdv(){
   if(advTimer){clearInterval(advTimer);advTimer=null;}
@@ -1334,18 +1520,18 @@ function submitAccusation(){
     G.meta.totalSolved=(G.meta.totalSolved||0)+1;
     G.meta.weekCount=(G.meta.weekCount||0)+1;
     earned=grantAchievements(cd);
-    saveState();
+    saveState();clearProgress();
   } else { G.caseWrong=true; }
   showEnding(correct,earned);
-  if(correct){[523,659,783,1046,1318].forEach((f,i)=>tone(f,'sine',.9,.1,i*.12));}
-  else{[220,196,174].forEach((f,i)=>tone(f,'sawtooth',.6,.08,i*.15));}
+  if(correct){[523,659,783,1046,1318].forEach((f,i)=>tone(f,'sine',.9,.1,i*.12));haptic([100,50,100,50,300]);}
+  else{[220,196,174].forEach((f,i)=>tone(f,'sawtooth',.6,.08,i*.15));haptic([200,100,400]);}
 }
 
 // ════════════════════════════════════════════════
 // ENDING
 // ════════════════════════════════════════════════
 function showEnding(correct,earned){
-  showPanel('ending');stopAmbient();stopFootsteps();
+  showPanel('ending');stopAmbient();stopFootsteps();stopPace();stopNarrate();
   const cd=CASES[G.currentCase];
   const suspect=cd.suspects[G.accusedSuspect];
   const motive=cd.motives.find(m=>m.id===G.accusedMotive);
@@ -1353,14 +1539,17 @@ function showEnding(correct,earned){
   const body=document.getElementById('ending-body');
   if(correct){
     const commend=(earned&&earned.length)?`<div class="end-commend"><div class="end-commend-t">🎖️ Commendations Earned</div>${earned.map(a=>`<div class="end-commend-i"><span class="ci2">${a.icon}</span><span>${a.name}<small>${a.desc}</small></span></div>`).join('')}</div>`:'';
-    body.innerHTML=`<div class="end-verdict ok">✓ Case Solved</div><div class="end-icon">🎉</div><h2 class="end-h">${e.correct.headline}</h2><div class="end-div"></div><p class="end-txt">${e.correct.text}</p><div class="end-reveal"><div class="end-rtl">The Full Truth</div><div class="end-rtxt">${e.correct.reveal.replace(/\n\n/g,'<br><br>')}</div></div>${commend}<button class="btn-replay" onclick="goHome()">← Back to Cases</button>`;
+    const st=runStats();
+    const statsHtml=`<div class="end-stats"><div class="end-stat"><div class="end-stat-val">${st.timeStr}</div><div class="end-stat-lbl">Time</div></div><div class="end-stat"><div class="end-stat-val">${st.distStr}</div><div class="end-stat-lbl">Distance</div></div><div class="end-stat"><div class="end-stat-val">${st.clueStr}</div><div class="end-stat-lbl">Clues Found</div></div></div>`;
+    const shareBtn=(navigator.share||navigator.clipboard)?`<button class="btn-share" onclick="shareResult()">📤 Share Your Verdict</button>`:'';
+    body.innerHTML=`<div class="end-verdict ok">✓ Case Solved</div><div class="end-icon">🎉</div><h2 class="end-h">${e.correct.headline}</h2><div class="end-div"></div>${statsHtml}<p class="end-txt">${e.correct.text}</p><div class="end-reveal"><div class="end-rtl">The Full Truth</div><div class="end-rtxt">${e.correct.reveal.replace(/\n\n/g,'<br><br>')}</div></div>${commend}${shareBtn}<button class="btn-replay" onclick="goHome()">← Back to Cases</button>`;
   } else {
     body.innerHTML=`<div class="end-verdict fail">✗ Wrong Accusation</div><div class="end-icon">🕯️</div><h2 class="end-h">${e.wrong.headline}</h2><div class="end-div"></div><p class="end-txt">You accused <em>${suspect.name}</em> — ${motive.text.toLowerCase()}. The real killer is still out there.</p><div class="end-reveal"><div class="end-rtl">What You Missed</div><div class="end-rtxt">${e.wrong.reveal.replace(/\n\n/g,'<br><br>')}</div></div><button class="btn-replay" onclick="openModeSelect('${G.currentCase}')">Try Again →</button><br><br><button class="btn-replay" onclick="goHome()" style="border-color:var(--smoke);color:var(--smoke)">← Cases</button>`;
   }
 }
 
 function goHome(){
-  stopAmbient();stopFootsteps();stopAdv();
+  stopAmbient();stopFootsteps();stopAdv();stopPace();stopNarrate();clearProgress();
   G.currentCase=null;G.currentScene=null;G.collectedClues=[];G.visitedScenes=[];G.accusedSuspect=null;G.accusedMotive=null;
   showPanel('home');
 }
