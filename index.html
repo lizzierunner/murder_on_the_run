@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Murder on the Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Josefin+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0e0b0f;--parchment:#f5efd8;--aged:#e8dfc0;--blood:#c0282a;--gold:#d4aa1a;--glight:#e8c030;--mist:#b0a8c8;--cream:#faf6ec;--teal:#2a9090;--smoke:#7a7090;--serif:'Cormorant Garamond',Georgia,serif;--sans:'Josefin Sans',sans-serif}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--ink);color:var(--parchment);font-family:var(--serif);overflow:hidden;touch-action:manipulation}
+#app{height:100vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+#app::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");background-size:200px}
+.screen{display:none;flex:1;overflow:hidden;flex-direction:column}
+.screen.active{display:flex}
+/* HOME */
+#screen-home{background:radial-gradient(ellipse 90% 70% at 50% 100%,rgba(74,68,88,.4) 0%,transparent 70%);overflow-y:auto}
+.home-hdr{padding:52px 24px 20px;text-align:center}
+.home-eyebrow{font-family:var(--sans);font-size:10px;letter-spacing:.4em;color:var(--gold);text-transform:uppercase;margin-bottom:10px}
+.home-title{font-size:38px;font-weight:700;line-height:1.05;color:var(--parchment);text-shadow:0 2px 24px rgba(212,170,26,.25)}
+.home-title em{color:var(--glight);font-style:italic;display:block}
+.home-div{width:100px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:18px auto}
+.home-sub{font-size:16px;font-style:italic;color:var(--mist);margin-bottom:32px;line-height:1.6}
+.cases-list{padding:0 16px 40px;display:flex;flex-direction:column;gap:12px}
+.case-card{border-radius:10px;overflow:hidden;cursor:pointer;border:1px solid rgba(212,170,26,.2);background:rgba(255,255,255,.03);transition:all .25s;animation:fadeUp .4s ease both}
+.case-card:hover,.case-card:active{border-color:var(--gold);background:rgba(212,170,26,.06);transform:translateY(-2px)}
+.case-card.locked{opacity:.4;pointer-events:none}
+.case-inner{padding:18px 16px;display:flex;gap:14px;align-items:flex-start}
+.case-num{font-family:var(--sans);font-size:10px;letter-spacing:.1em;background:rgba(212,170,26,.12);border:1px solid rgba(212,170,26,.3);color:var(--gold);padding:4px 8px;border-radius:4px;flex-shrink:0;margin-top:3px}
+.case-info{flex:1}
+.case-sub{font-family:var(--sans);font-size:10px;letter-spacing:.2em;color:var(--teal);text-transform:uppercase;margin-bottom:5px}
+.case-ttl{font-size:22px;font-weight:700;color:var(--parchment);line-height:1.2;margin-bottom:6px}
+.case-blurb{font-size:14px;font-style:italic;color:var(--mist);line-height:1.5;margin-bottom:10px}
+.case-meta{display:flex;gap:14px}
+.case-meta span{font-family:var(--sans);font-size:10px;letter-spacing:.08em;color:var(--smoke)}
+.case-status{font-family:var(--sans);font-size:9px;letter-spacing:.15em;text-transform:uppercase;padding:3px 10px;border-radius:10px;align-self:flex-start;margin-top:3px;flex-shrink:0}
+.case-status.new{background:rgba(42,144,144,.15);color:var(--teal);border:1px solid rgba(42,144,144,.3)}
+.case-status.solved{background:rgba(212,170,26,.12);color:var(--gold);border:1px solid rgba(212,170,26,.3)}
+.case-status.locked{background:rgba(122,112,144,.1);color:var(--smoke);border:1px solid rgba(122,112,144,.2)}
+/* RUN SCREEN */
+#screen-run{position:relative;background:var(--ink)}
+.run-hud{display:flex;align-items:center;justify-content:space-between;padding:44px 16px 10px;flex-shrink:0;border-bottom:1px solid rgba(212,170,26,.1);background:rgba(14,11,15,.7)}
+.hud-loc{font-family:var(--sans);font-size:11px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase}
+.hud-btns{display:flex;gap:6px}
+.hud-btn{background:rgba(255,255,255,.05);border:1px solid rgba(212,170,26,.25);color:var(--aged);padding:7px 11px;border-radius:5px;cursor:pointer;font-family:var(--sans);font-size:11px;letter-spacing:.06em;transition:all .2s;display:flex;align-items:center;gap:5px}
+.hud-btn:hover{border-color:var(--gold);color:var(--gold)}
+.hud-btn .badge{background:var(--blood);color:white;border-radius:8px;padding:1px 5px;font-size:9px;min-width:16px;text-align:center}
+.run-content{flex:1;overflow-y:auto;padding:24px 20px 12px;scrollbar-width:thin;scrollbar-color:rgba(212,170,26,.2) transparent}
+.sloc{font-family:var(--sans);font-size:11px;letter-spacing:.25em;color:var(--teal);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.sloc::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(42,144,144,.35),transparent)}
+.sh{font-size:26px;font-weight:700;color:var(--parchment);margin-bottom:16px;line-height:1.2}
+.sp_{font-size:19px;line-height:1.9;color:var(--aged);margin-bottom:18px}
+.sp_ em{color:var(--parchment);font-style:italic}
+.sp_ strong{color:var(--glight);font-weight:600}
+.sspk{font-family:var(--sans);font-size:11px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:5px}
+.sq{font-size:19px;font-style:italic;color:var(--cream);line-height:1.8;border-left:2px solid rgba(212,170,26,.4);padding-left:16px;margin-bottom:18px}
+.clue-pop{background:rgba(192,40,42,.07);border:1px solid rgba(192,40,42,.35);border-radius:7px;padding:12px 14px;margin:14px 0;display:flex;gap:12px;align-items:flex-start;animation:clueReveal .5s ease}
+@keyframes clueReveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ci{font-size:24px;flex-shrink:0}
+.clabel{font-family:var(--sans);font-size:10px;letter-spacing:.18em;color:#e05050;text-transform:uppercase;margin-bottom:4px}
+.cname{font-size:17px;font-weight:600;color:var(--parchment);margin-bottom:3px}
+.cdesc{font-size:15px;color:var(--mist);font-style:italic;line-height:1.5}
+/* AUTO-ADVANCE */
+.adv-wrap{flex-shrink:0;padding:8px 20px 0;display:none}
+.adv-wrap.vis{display:block}
+.adv-lbl{font-family:var(--sans);font-size:10px;letter-spacing:.15em;color:var(--smoke);text-transform:uppercase;margin-bottom:5px;display:flex;justify-content:space-between}
+.adv-lbl span{color:var(--gold)}
+.adv-track{height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.adv-fill{height:100%;background:var(--gold);border-radius:2px;transition:width 1s linear}
+/* CHOICES */
+.choices-wrap{flex-shrink:0;padding:10px 12px 16px;display:flex;flex-direction:column;gap:8px}
+.choice-big{background:rgba(255,255,255,.03);border:1px solid rgba(212,170,26,.2);color:var(--aged);padding:18px 20px;text-align:left;cursor:pointer;font-family:var(--serif);font-size:18px;line-height:1.45;transition:all .2s;display:flex;align-items:flex-start;gap:12px;border-radius:8px;min-height:64px;-webkit-tap-highlight-color:transparent}
+.choice-big:hover,.choice-big:active{background:rgba(212,170,26,.08);border-color:var(--gold);color:var(--parchment)}
+.carrow{color:var(--gold);flex-shrink:0;margin-top:3px;font-style:normal;font-size:20px}
+.ctag{font-family:var(--sans);font-size:10px;letter-spacing:.15em;color:var(--teal);text-transform:uppercase;display:block;margin-bottom:3px}
+/* PANELS */
+#screen-suspects,#screen-clues{overflow-y:auto}
+.panel-hdr{padding:44px 20px 14px;border-bottom:1px solid rgba(212,170,26,.12);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.panel-back{background:none;border:none;color:var(--mist);cursor:pointer;font-size:20px;padding:4px 8px;transition:color .2s}
+.panel-back:hover{color:var(--gold)}
+.panel-ttl{font-family:var(--sans);font-size:13px;letter-spacing:.22em;color:var(--gold);text-transform:uppercase}
+.suspects-list,.journal-list{padding:14px 14px 40px;display:flex;flex-direction:column;gap:10px}
+.susp-card{background:rgba(255,255,255,.025);border:1px solid rgba(212,170,26,.15);border-radius:8px;padding:14px;animation:fadeUp .3s ease both}
+.susp-top{display:flex;gap:14px;align-items:flex-start;margin-bottom:10px}
+.susp-av{width:52px;height:52px;border-radius:50%;border:2px solid rgba(212,170,26,.25);display:flex;align-items:center;justify-content:center;font-size:24px;background:rgba(74,68,88,.3);flex-shrink:0}
+.susp-name{font-size:20px;font-weight:600;color:var(--parchment);margin-bottom:2px}
+.susp-role{font-family:var(--sans);font-size:10px;letter-spacing:.15em;color:var(--teal);text-transform:uppercase;margin-bottom:5px}
+.susp-bio{font-size:15px;font-style:italic;color:var(--mist);line-height:1.5}
+.sus-bar{display:flex;align-items:center;gap:10px}
+.sus-lbl{font-family:var(--sans);font-size:10px;letter-spacing:.12em;color:var(--mist);text-transform:uppercase;width:66px;flex-shrink:0}
+.sus-track{flex:1;height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden}
+.sus-fill{height:100%;border-radius:3px;transition:width .8s ease}
+.sus-pct{font-family:var(--sans);font-size:11px;color:var(--mist);width:32px;text-align:right}
+.sus-secret{margin-top:10px;padding:10px 12px;background:rgba(192,40,42,.07);border-left:2px solid var(--blood);font-size:15px;font-style:italic;color:var(--aged);display:none;line-height:1.55}
+.sus-secret.on{display:block;animation:clueReveal .4s ease}
+.sus-secret-lbl{font-family:var(--sans);font-size:10px;letter-spacing:.15em;color:#e05050;text-transform:uppercase;margin-bottom:5px}
+.j-clue{background:rgba(242,234,216,.04);border:1px solid rgba(212,170,26,.14);border-radius:7px;padding:12px 14px;display:flex;gap:12px;animation:fadeUp .3s ease both}
+.j-icon{font-size:26px;flex-shrink:0}
+.j-name{font-size:18px;font-weight:600;color:var(--parchment);margin-bottom:4px}
+.j-text{font-size:15px;color:var(--mist);font-style:italic;line-height:1.5;margin-bottom:5px}
+.j-tag{font-family:var(--sans);font-size:10px;letter-spacing:.12em;color:var(--teal);text-transform:uppercase}
+.j-empty{text-align:center;padding:60px 20px;color:var(--smoke);font-style:italic;font-size:17px}
+/* ACCUSATION */
+#screen-accuse{overflow-y:auto}
+.acc-intro{padding:20px 20px 16px;font-size:17px;font-style:italic;color:var(--aged);line-height:1.75;border-bottom:1px solid rgba(212,170,26,.1)}
+.acc-intro strong{color:var(--glight)}
+.acc-sec{font-family:var(--sans);font-size:11px;letter-spacing:.25em;color:var(--gold);text-transform:uppercase;padding:18px 20px 10px}
+.acc-opt{margin:0 14px 8px;background:rgba(255,255,255,.025);border:2px solid rgba(212,170,26,.15);border-radius:7px;padding:13px 14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px}
+.acc-opt:hover{border-color:var(--gold);background:rgba(212,170,26,.06)}
+.acc-opt.sel{border-color:var(--gold);background:rgba(212,170,26,.1)}
+.acc-radio{width:18px;height:18px;border-radius:50%;border:2px solid rgba(212,170,26,.4);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.acc-opt.sel .acc-radio{border-color:var(--gold);background:var(--gold)}
+.acc-opt.sel .acc-radio::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--ink)}
+.acc-txt{font-size:17px;color:var(--aged)}
+.acc-opt.sel .acc-txt{color:var(--parchment)}
+.btn-accuse{display:block;width:calc(100% - 28px);margin:22px 14px 32px;background:var(--blood);border:none;color:var(--parchment);font-family:var(--sans);font-size:12px;letter-spacing:.2em;text-transform:uppercase;padding:17px;cursor:pointer;transition:all .2s;border-radius:7px;opacity:.45}
+.btn-accuse.ready{opacity:1;box-shadow:0 4px 24px rgba(192,40,42,.4)}
+.btn-accuse.ready:hover{background:#a82020}
+/* ENDING */
+#screen-ending{align-items:center;overflow-y:auto;padding:48px 24px 60px}
+.end-verdict{font-family:var(--sans);font-size:11px;letter-spacing:.35em;margin-bottom:14px;text-transform:uppercase}
+.end-verdict.ok{color:var(--teal)}
+.end-verdict.fail{color:var(--blood)}
+.end-icon{font-size:60px;margin-bottom:18px}
+.end-h{font-size:30px;font-weight:700;text-align:center;margin-bottom:10px;line-height:1.2;color:var(--parchment)}
+.end-div{width:80px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:14px auto}
+.end-txt{font-size:17px;font-style:italic;color:var(--aged);line-height:1.8;text-align:center;max-width:400px;margin-bottom:24px}
+.end-reveal{background:rgba(255,255,255,.03);border:1px solid rgba(212,170,26,.2);border-radius:8px;padding:18px;width:100%;max-width:420px;margin-bottom:28px}
+.end-rtl{font-family:var(--sans);font-size:11px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:10px}
+.end-rtxt{font-size:16px;color:var(--aged);line-height:1.8}
+.end-rtxt em{color:var(--parchment);font-style:italic}
+.btn-replay{font-family:var(--sans);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);background:transparent;border:1px solid var(--gold);padding:14px 32px;cursor:pointer;transition:all .2s;border-radius:6px;margin-bottom:10px}
+.btn-replay:hover{background:rgba(212,170,26,.1)}
+/* MISC */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.fade-in{animation:fadeIn .35s ease}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(212,170,26,.2);border-radius:2px}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(14,11,15,.96);border:1px solid var(--blood);color:var(--parchment);padding:10px 20px;font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase;border-radius:5px;transition:transform .3s ease;z-index:1000;white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#snd-btn{position:fixed;top:10px;right:12px;z-index:500;background:rgba(14,11,15,.7);border:1px solid rgba(212,170,26,.2);color:var(--mist);font-size:18px;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+#snd-btn:hover{border-color:var(--gold);color:var(--gold)}
+/* HOME REDESIGN — "Welcome, Detective" case-file (parchment) */
+#screen-home{background:#efe4c6;color:#3a2c1a;overflow-y:auto;background-image:radial-gradient(rgba(120,90,40,.07) 1px,transparent 1px);background-size:15px 15px}
+.home2{padding:46px 20px calc(44px + env(safe-area-inset-bottom));max-width:660px;margin:0 auto;width:100%}
+.home2-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;border-bottom:1px solid rgba(120,90,40,.3);padding-bottom:22px;margin-bottom:6px}
+.h2-eyebrow{font-family:var(--sans);font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:#b8901a;font-weight:600;margin-bottom:10px}
+.h2-title{font-family:var(--serif);font-size:44px;line-height:.98;font-weight:700;color:#b8901a;letter-spacing:.01em}
+.h2-sub{font-family:var(--serif);font-style:italic;font-size:19px;color:#6a5638;margin-top:12px}
+.h2-rank{font-family:var(--sans);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#7a1e1e;margin-top:12px}
+.home2-badge{display:flex;flex-direction:row;align-items:center;gap:10px;flex-shrink:0;margin-top:4px}
+.h2-level{background:linear-gradient(160deg,#dbb02f,#b8901a);color:#2b2012;border-radius:22px;padding:8px 16px;text-align:center;font-family:var(--sans);box-shadow:0 3px 10px rgba(120,90,40,.28)}
+.h2-level span{display:block;font-size:9px;letter-spacing:.2em;text-transform:uppercase;opacity:.85;font-weight:600}
+.h2-level b{font-size:20px;line-height:1.05}
+.h2-crest{width:54px;height:54px;border-radius:50%;background:#7a1e1e;color:#f2e2c8;display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid #b8901a;box-shadow:0 3px 10px rgba(120,30,30,.28)}
+.telegram{background:#f6efdb;border:1px solid rgba(120,90,40,.32);border-radius:11px;position:relative;margin:26px 0 8px;box-shadow:0 4px 16px rgba(120,90,40,.12)}
+.tg-tab{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:#efe4c6;padding:0 14px;font-family:var(--sans);font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:#7a1e1e;font-weight:600}
+.tg-body{padding:26px 22px 20px}
+.tg-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.tg-goal{display:flex;align-items:center;gap:12px;font-family:var(--sans);font-size:17px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#3a2c1a;line-height:1.05}
+.tg-dot{color:#7a1e1e;font-size:24px}
+.tg-count{font-family:var(--sans);font-size:34px;font-weight:700;color:#7a1e1e;text-align:right;line-height:.85}
+.tg-count small{font-size:15px;letter-spacing:.1em;font-weight:600}
+.tg-track{height:14px;background:#e2d3b0;border-radius:8px;overflow:hidden;border:1px solid rgba(120,90,40,.2)}
+.tg-fill{height:100%;background:linear-gradient(90deg,#c47a12,#b8901a);border-radius:8px;transition:width .8s ease}
+.tg-foot{display:flex;justify-content:space-between;margin-top:11px;font-family:var(--sans);font-size:14px;color:#6a5638;letter-spacing:.02em}
+.tg-foot span:first-child{font-weight:700;color:#3a2c1a}
+.begin-div{display:flex;align-items:center;gap:14px;margin:32px 0 18px}
+.begin-div::before,.begin-div::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(184,144,26,.6),transparent)}
+.begin-div span{font-family:var(--serif);font-size:24px;font-weight:600;color:#b8901a;letter-spacing:.03em}
+.pcases{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pcase{background:#f4ecd6;border:1px solid rgba(120,90,40,.28);border-radius:11px;padding:22px 16px 16px;text-align:center;cursor:pointer;position:relative;overflow:hidden;transition:transform .18s ease,box-shadow .2s ease;box-shadow:0 3px 10px rgba(120,90,40,.1);animation:fadeUp .4s ease both}
+.pcase:hover,.pcase:active{transform:translateY(-3px);box-shadow:0 8px 22px rgba(120,90,40,.2)}
+.pcase-bar{position:absolute;top:0;left:0;right:0;height:5px}
+.pcase-bar.navy{background:#1c2b45}
+.pcase-bar.maroon{background:#7a1e1e}
+.pcase-crest{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin:6px auto 14px;border:2px solid #b8901a;color:#f2e2c8}
+.pcase-crest.navy{background:#1c2b45}
+.pcase-crest.maroon{background:#7a1e1e}
+.pcase-ttl{font-family:var(--serif);font-size:21px;font-weight:700;color:#2b2018;line-height:1.15;margin-bottom:7px}
+.pcase-sub{font-family:var(--serif);font-style:italic;font-size:14px;color:#6a5638;line-height:1.4;margin-bottom:15px;min-height:38px}
+.pcase-pill{display:inline-block;font-family:var(--sans);font-size:12px;letter-spacing:.08em;color:#7a1e1e;border:1px solid rgba(122,30,30,.5);border-radius:4px;padding:5px 12px}
+.pcase-tag{font-family:var(--sans);font-size:9px;letter-spacing:.14em;text-transform:uppercase;margin-top:13px}
+.pcase-tag.new{color:#2a7a5a}
+.pcase-tag.solved{color:#b8901a}
+.pcase-tag.locked{color:#9a8a6a}
+.pcase.locked{opacity:.5;pointer-events:none}
+.home2-foot{text-align:center;font-family:var(--sans);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#a08a5a;margin-top:30px}
+@media(max-width:420px){.h2-title{font-size:37px}.pcases{gap:10px}.pcase{padding:18px 11px 14px}.pcase-ttl{font-size:18px}.tg-count{font-size:30px}}
+/* run-mode HUD chip + card hint */
+.hud-mode{font-family:var(--sans);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-top:4px}
+.pcase-modes{font-family:var(--sans);font-size:9px;letter-spacing:.06em;color:#9a7a4a;margin-top:11px}
+/* MODE SELECT MODAL */
+#mode-modal{position:fixed;inset:0;z-index:1100;background:rgba(10,7,11,.86);display:none;align-items:center;justify-content:center;padding:22px;backdrop-filter:blur(4px)}
+#mode-modal.show{display:flex;animation:fadeIn .25s ease}
+.mm-card{background:linear-gradient(180deg,#1a151c,#120e14);border:1px solid rgba(212,170,26,.4);border-radius:14px;padding:26px 22px;max-width:440px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+.mm-eyebrow{font-family:var(--sans);font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:8px}
+.mm-title{font-family:var(--serif);font-size:26px;font-weight:700;color:var(--parchment);text-align:center;line-height:1.15;margin-bottom:8px}
+.mm-sub{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--mist);text-align:center;line-height:1.5;margin-bottom:22px}
+.mm-opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:rgba(255,255,255,.03);border:1px solid rgba(212,170,26,.25);border-radius:10px;padding:16px;margin-bottom:12px;cursor:pointer;transition:all .18s;color:var(--aged)}
+.mm-opt:hover,.mm-opt:active{border-color:var(--gold);background:rgba(212,170,26,.08);transform:translateY(-2px)}
+.mm-opt.pursuit{border-color:rgba(192,40,42,.3)}
+.mm-opt.pursuit:hover{border-color:var(--blood);background:rgba(192,40,42,.1)}
+.mm-ico{font-size:30px;flex-shrink:0}
+.mm-txt b{display:block;font-family:var(--serif);font-size:20px;font-weight:700;color:var(--parchment);margin-bottom:3px}
+.mm-txt small{font-family:var(--serif);font-size:14px;font-style:italic;color:var(--mist);line-height:1.4}
+.mm-cancel{display:block;width:100%;background:none;border:none;color:var(--smoke);font-family:var(--sans);font-size:11px;letter-spacing:.18em;text-transform:uppercase;padding:12px;margin-top:4px;cursor:pointer;transition:color .2s}
+.mm-cancel:hover{color:var(--mist)}
+</style>
+</head>
+<body>
+<div id="app">
+<button id="snd-btn" onclick="toggleSound()">🔊</button>
+
+<div id="screen-home" class="screen active">
+  <div class="home2">
+    <div class="home2-top">
+      <div class="home2-head">
+        <div class="h2-eyebrow">Case File Active</div>
+        <h1 class="h2-title">Welcome,<br>Detective</h1>
+        <div class="h2-sub">The game is afoot!</div>
+        <div class="h2-rank" id="home-rank">Constable · Blackwood Agency</div>
+      </div>
+      <div class="home2-badge">
+        <div class="h2-level"><span>Level</span><b id="home-level">1</b></div>
+        <div class="h2-crest">🔍</div>
+      </div>
+    </div>
+
+    <div class="telegram">
+      <div class="tg-tab">— Telegram —</div>
+      <div class="tg-body">
+        <div class="tg-row">
+          <div class="tg-goal"><span class="tg-dot">◎</span><div>Weekly<br>Investigation</div></div>
+          <div class="tg-count" id="wk-count">0/5<br><small>Cases</small></div>
+        </div>
+        <div class="tg-track"><div class="tg-fill" id="wk-fill" style="width:0%"></div></div>
+        <div class="tg-foot"><span id="wk-pct">0% Complete</span><span id="wk-remaining">5 cases remaining</span></div>
+      </div>
+    </div>
+
+    <div class="begin-div"><span>Begin Investigation</span></div>
+    <div class="pcases" id="cases-list"></div>
+
+    <div class="home2-foot">Murder on the Run · Blackwood Detective Agency</div>
+  </div>
+</div>
+
+<div id="screen-run" class="screen">
+  <div class="run-hud">
+    <div><div class="hud-loc" id="hud-loc">Ashwick Manor</div><div class="hud-mode" id="hud-mode">🚶 Investigation</div></div>
+    <div class="hud-btns">
+      <button class="hud-btn" onclick="showPanel('suspects')">🎭 <span id="hud-case-lbl">Case I</span></button>
+      <button class="hud-btn" onclick="showPanel('clues')">🧾 <span class="badge" id="clue-count">0</span></button>
+      <button class="hud-btn" onclick="goHome()">⌂</button>
+    </div>
+  </div>
+  <div class="run-content" id="run-content"></div>
+  <div class="adv-wrap" id="adv-wrap">
+    <div class="adv-lbl">Auto-advancing in <span id="adv-secs">12</span>s — tap a choice to skip</div>
+    <div class="adv-track"><div class="adv-fill" id="adv-fill" style="width:100%"></div></div>
+  </div>
+  <div class="choices-wrap" id="choices-wrap"></div>
+</div>
+
+<div id="screen-suspects" class="screen">
+  <div class="panel-hdr">
+    <button class="panel-back" onclick="showPanel('run')">←</button>
+    <div class="panel-ttl">Suspect Dossiers</div>
+  </div>
+  <div class="suspects-list" id="suspects-list"></div>
+</div>
+
+<div id="screen-clues" class="screen">
+  <div class="panel-hdr">
+    <button class="panel-back" onclick="showPanel('run')">←</button>
+    <div class="panel-ttl">Evidence Journal</div>
+  </div>
+  <div class="journal-list" id="journal-list"></div>
+</div>
+
+<div id="screen-accuse" class="screen">
+  <div class="panel-hdr">
+    <button class="panel-back" onclick="showPanel('run')">←</button>
+    <div class="panel-ttl">Final Accusation</div>
+  </div>
+  <div class="acc-intro">The evidence is gathered. Name <strong>the killer</strong> and their <strong>motive</strong>. One chance.</div>
+  <div class="acc-sec">Who committed the murder?</div>
+  <div id="acc-suspects"></div>
+  <div class="acc-sec">What was their motive?</div>
+  <div id="acc-motives"></div>
+  <button class="btn-accuse" id="btn-accuse" onclick="submitAccusation()">Make My Accusation</button>
+</div>
+
+<div id="screen-ending" class="screen">
+  <div id="ending-body"></div>
+</div>
+
+<div id="toast">🔍 New clue!</div>
+
+<div id="mode-modal">
+  <div class="mm-card">
+    <div class="mm-eyebrow">Select Your Pace</div>
+    <div class="mm-title" id="mm-title">Case</div>
+    <div class="mm-sub">The story keeps step with your run. Choose how hard you mean to go.</div>
+    <button class="mm-opt" id="mm-inv" onclick="chooseMode('investigation')">
+      <span class="mm-ico">🚶</span>
+      <span class="mm-txt"><b>Investigation</b><small>Steady &amp; audio-guided. Scenes unfold at an easy jog.</small></span>
+    </button>
+    <button class="mm-opt pursuit" id="mm-pur" onclick="chooseMode('pursuit')">
+      <span class="mm-ico">🏃</span>
+      <span class="mm-txt"><b>Pursuit</b><small>High-intensity. Scenes move fast — keep your tempo up.</small></span>
+    </button>
+    <button class="mm-cancel" onclick="closeModeSelect()">Cancel</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+// AUDIO ENGINE
+// ════════════════════════════════════════════════
+const AC = new (window.AudioContext||window.webkitAudioContext)();
+let soundOn=true, ambNodes=[], footInt=null, typeInt=null;
+
+function resumeAC(){if(AC.state==='suspended')AC.resume();}
+
+function toggleSound(){
+  soundOn=!soundOn;
+  document.getElementById('snd-btn').textContent=soundOn?'🔊':'🔇';
+  ambNodes.forEach(n=>{try{n.gain&&n.gain.setTargetAtTime(soundOn?.18:0,AC.currentTime,.3)}catch(e){}});
+  if(!soundOn&&footInt){clearInterval(footInt);footInt=null;}
+}
+
+function tone(freq,type,dur,vol,delay=0){
+  if(!soundOn)return;resumeAC();
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(AC.destination);
+  o.type=type;o.frequency.value=freq;
+  const t=AC.currentTime+delay;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.01);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.start(t);o.stop(t+dur+.05);
+}
+
+function sfxPage(){
+  if(!soundOn)return;resumeAC();
+  const b=AC.createBuffer(1,AC.sampleRate*.15,AC.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(d.length*.3))*.1;
+  const s=AC.createBufferSource(),f=AC.createBiquadFilter();
+  f.type='bandpass';f.frequency.value=3000;f.Q.value=.5;
+  s.buffer=b;s.connect(f);f.connect(AC.destination);s.start();
+}
+
+function sfxChime(){
+  if(!soundOn)return;
+  [523.25,659.25,783.99,1046.5].forEach((f,i)=>tone(f,'sine',.7,.12,i*.1));
+}
+
+function sfxTick(){tone(900,'sine',.07,.05);}
+
+function sfxType(on){
+  if(typeInt)clearInterval(typeInt);
+  if(!on||!soundOn)return;
+  typeInt=setInterval(()=>{if(!soundOn)return;tone(1200+Math.random()*400,'square',.04,.025);},85);
+  setTimeout(()=>{clearInterval(typeInt);typeInt=null;},2400);
+}
+
+function startFootsteps(interval){
+  if(footInt)clearInterval(footInt);
+  footInt=setInterval(()=>{
+    if(!soundOn)return;resumeAC();
+    const b=AC.createBuffer(1,AC.sampleRate*.09,AC.sampleRate),d=b.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(d.length*.22))*.07;
+    const s=AC.createBufferSource(),f=AC.createBiquadFilter();
+    f.type='lowpass';f.frequency.value=280;
+    s.buffer=b;s.connect(f);f.connect(AC.destination);s.start();
+  },interval||520);
+}
+
+function stopFootsteps(){if(footInt){clearInterval(footInt);footInt=null;}}
+
+function startAmbient(mood){
+  stopAmbient();if(!soundOn)return;resumeAC();
+  const mGain=AC.createGain();mGain.gain.value=0;mGain.connect(AC.destination);
+  const freqs=mood==='outdoor'?[65.4,98.1,130.8]:mood==='tense'?[55,82.5,110]:[49,73.5,98];
+  freqs.forEach(f=>{
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type='sine';o.frequency.value=f+Math.random()*.5;g.gain.value=.055;
+    o.connect(g);g.connect(mGain);o.start();
+    ambNodes.push(o);
+  });
+  const nb=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),nd=nb.getChannelData(0);
+  for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+  const ns=AC.createBufferSource(),nf=AC.createBiquadFilter(),ng=AC.createGain();
+  nf.type='bandpass';nf.frequency.value=700;nf.Q.value=.3;ng.gain.value=.014;
+  ns.buffer=nb;ns.loop=true;ns.connect(nf);nf.connect(ng);ng.connect(mGain);ns.start();
+  ambNodes.push({gain:mGain});
+  mGain.gain.setTargetAtTime(.18,AC.currentTime,1.5);
+}
+
+function stopAmbient(){
+  ambNodes.forEach(n=>{try{n.stop?n.stop():n.gain&&n.gain.setTargetAtTime(0,AC.currentTime,.5)}catch(e){}});
+  ambNodes=[];
+}
+
+// ════════════════════════════════════════════════
+// CASE DATA — CASE 1: ASHWICK MANOR
+// ════════════════════════════════════════════════
+const CASE1={
+  id:'ashwick',subtitle:'Case I',title:'The Last Supper at Ashwick Manor',
+  blurb:'Lord Reginald Ashwick is found dead in his locked study. Six guests. One killer. One evening to find them.',
+  meta:{distance:'3.1 mi',time:'~32 min',year:'1923'},ambient:'tense',
+  correctKiller:'thomas',correctMotive:'embezzlement',
+  suspects:{
+    eleanor:{name:'Lady Eleanor Ashwick',role:'The Widow',av:'👩‍🦳',bio:"Lord Ashwick's wife of 22 years. Impeccably composed. Almost suspiciously so.",motive:"Stood to inherit everything — until the new will surfaced.",secret:'Seen leaving the study at 9:47 PM. Fifteen minutes before the body was found.',suspicion:75,secretOn:false},
+    thomas:{name:'Thomas Finch',role:'The Solicitor',av:'👨‍💼',bio:'The family lawyer. Nervous. Keeps adjusting his cufflinks.',motive:'Had embezzled from the estate for three years. Ashwick had discovered it.',secret:'A letter in his pocket: "You have until Sunday." Signed R.A.',suspicion:60,secretOn:false},
+    vivienne:{name:'Vivienne Larue',role:'The Guest',av:'👩‍🎨',bio:'A French painter. Old friend of the family, or so she claims.',motive:'She and Ashwick had a history — and a secret she needed buried.',secret:'A locket near the body contains a portrait. Unmistakably hers.',suspicion:45,secretOn:false},
+    harold:{name:'Harold Durst',role:'The Partner',av:'🧔',bio:'Rough-hewn self-made man. Out of place among the silverware.',motive:'Ashwick threatened to dissolve their venture, which would have ruined Durst.',secret:'His hands were unusually clean at dinner. As if recently scrubbed.',suspicion:50,secretOn:false},
+    constance:{name:'Constance Bell',role:'The Niece',av:'👩‍🦱',bio:"Ashwick's niece. Sweet-natured, or performing it well.",motive:'Cut from the will three months ago after a bitter argument.',secret:'A pawn ticket: one silver candelabra from the Ashwick estate.',suspicion:40,secretOn:false}
+  },
+  motives:[
+    {id:'inheritance',text:'To inherit before the new will was signed'},
+    {id:'embezzlement',text:'To silence Ashwick before the embezzlement was exposed'},
+    {id:'secret',text:'To protect a buried personal secret'},
+    {id:'revenge',text:'Personal revenge for being cut from the will'},
+    {id:'business',text:'To prevent financial ruin from the dissolved partnership'}
+  ],
+  clues:{
+    letter:{icon:'💌',name:'The Threatening Letter',desc:"From Ashwick to Finch: \"You have until Sunday to make things right, or I shall involve the authorities.\"",tag:'Document · Study'},
+    glass:{icon:'🥃',name:'The Poisoned Glass',desc:'A whisky glass from the desk. Residue of a sedative compound — enough to incapacitate a healthy man, lethal for a weak heart.',tag:'Physical Evidence · Study'},
+    locket:{icon:'📿',name:'The Miniature Locket',desc:'Found beneath the desk. Contains two portraits — a woman resembling Vivienne Larue, and a young boy.',tag:'Personal Item · Study'},
+    will:{icon:'📜',name:'The Amended Will',desc:"Draft, unsigned, in Ashwick's hand. Removes Lady Eleanor entirely. Redirects the estate to a charitable trust.",tag:'Document · Safe'},
+    glove:{icon:'🧤',name:'The Monogrammed Glove',desc:'Ladies silk evening glove behind the armchair. Monogrammed "E.A." — Eleanor Ashwick.',tag:'Physical Evidence · Study'},
+    pawnticket:{icon:'🎫',name:'The Pawn Ticket',desc:'From Harwick & Sons. Item: one silver candelabra, Ashwick estate inventory #14-B. Date: last Tuesday.',tag:'Document · Personal'},
+    cufflink:{icon:'🔘',name:'The Cufflink',desc:'Gold cufflink at the window latch. Initials: T.F. Finch had no left cufflink at dinner, though he denied noticing.',tag:'Physical Evidence · Window'},
+    appointment:{icon:'📅',name:'The Appointment Book',desc:'"9:30 — T.F. Final meeting. The matter must be resolved tonight."',tag:'Document · Desk'},
+    dissolution:{icon:'✒️',name:'The Dissolution Notice',desc:"A signed draft in Ashwick's hand: the partnership with Harold Durst, to be dissolved within the month. Ruin, for a self-made man.",tag:'Document · Safe'}
+  },
+  scenes:{
+    intro:{loc:'Ashwick Manor — Entrance Hall',title:'A Death in the Family',
+      text:[
+        {t:'p',c:'The telegram arrived at half past eight. By ten you are standing in the entrance hall of <em>Ashwick Manor</em>, the old house settling around you like a guilty conscience.'},
+        {t:'p',c:'Inspector Graves meets you at the door — a man who has clearly decided the answer and would prefer you agreed.'},
+        {t:'sp',c:'Inspector Graves'},
+        {t:'q',c:'"Lord Reginald Ashwick. Found dead in his locked study at ten o\'clock. Door locked from the inside. Family\'s in the drawing room. Have a look around, would you?"'},
+        {t:'p',c:'You consider your first move.'}
+      ],
+      choices:[
+        {text:'Examine the study — that\'s where it happened.',tag:'Investigate',next:'study_first'},
+        {text:'Speak with the family first.',tag:'Interview',next:'drawing_room'},
+        {text:'Ask Graves what he already thinks.',tag:'Question',next:'graves_theory'}
+      ]
+    },
+    graves_theory:{loc:'Entrance Hall',title:"The Inspector's View",
+      text:[
+        {t:'sp',c:'Inspector Graves'},
+        {t:'q',c:'"Lady Eleanor, if you ask me. Found the body herself — very convenient. Stands to inherit rather a lot."'},
+        {t:'p',c:'The obvious answer. Sometimes correct. Also what a clever killer counts on.'}
+      ],
+      choices:[
+        {text:'Head to the study.',tag:'Investigate',next:'study_first'},
+        {text:'Go to the drawing room.',tag:'Interview',next:'drawing_room'}
+      ]
+    },
+    study_first:{loc:'The Study — East Wing',title:'The Scene of the Crime',clues:['glass','letter'],
+      text:[
+        {t:'p',c:'The study smells of <em>pipe tobacco and something chemical</em> — sharp, wrong. Lord Ashwick is slumped in his chair wearing an expression of surprise.'},
+        {t:'p',c:'On the desk: two whisky glasses, ash in the tray, and a letter in Ashwick\'s handwriting, folded but unsealed.'},
+        {t:'clue',id:'glass'},{t:'clue',id:'letter'},
+        {t:'p',c:'The door was locked from within. Yet the window latch is old and loose — the kind that can be eased shut from outside by a patient hand. This was no stranger.'}
+      ],
+      choices:[
+        {text:'Search behind the desk more carefully.',tag:'Search',next:'study_search'},
+        {text:'The letter names Finch. Go find him.',tag:'Interview',next:'find_thomas'},
+        {text:'Go meet the family in the drawing room.',tag:'Interview',next:'drawing_room'}
+      ]
+    },
+    study_search:{loc:'The Study',title:'A Closer Look',clues:['glove','cufflink','appointment','locket'],susp:{thomas:8,eleanor:6},
+      text:[
+        {t:'p',c:'Behind the armchair: a glove. Silk, white, monogrammed.'},
+        {t:'clue',id:'glove'},
+        {t:'p',c:'At the window latch, something catches the light. A cufflink, dislodged.'},
+        {t:'clue',id:'cufflink'},
+        {t:'p',c:"The appointment diary sits open. The final entry is brief and unambiguous."},
+        {t:'clue',id:'appointment'},
+        {t:'p',c:'And half-hidden beneath the desk, its clasp sprung open — a small gold locket.'},
+        {t:'clue',id:'locket'}
+      ],
+      choices:[
+        {text:'Rejoin the guests in the drawing room.',tag:'Interview',next:'drawing_room'},
+        {text:'Find Thomas Finch immediately.',tag:'Interview',next:'find_thomas'},
+        {text:'Confront Lady Eleanor about her glove.',tag:'Interview',next:'find_eleanor'},
+        {text:'Check the wall safe.',tag:'Investigate',next:'check_safe'}
+      ]
+    },
+    check_safe:{loc:'The Study — Wall Safe',title:'Behind the Painting',clues:['will','dissolution'],susp:{eleanor:8,harold:8},
+      text:[
+        {t:'p',c:"Behind a portrait of the elder Ashwick — a man apparently born disapproving — is the safe. Inside: a deed, a ledger, and a document in Ashwick's own hand."},
+        {t:'clue',id:'will'},
+        {t:'p',c:'If signed, Lady Eleanor received nothing. Someone had reason to ensure it never was.'},
+        {t:'p',c:'Beneath the will, a second paper — a notice of dissolution.'},
+        {t:'clue',id:'dissolution'}
+      ],
+      choices:[
+        {text:'This gives Eleanor motive. Confront her.',tag:'Interview',next:'find_eleanor'},
+        {text:'This would ruin Durst. Find Harold.',tag:'Interview',next:'find_harold'},
+        {text:'Finch arranged all estate matters. Find him.',tag:'Interview',next:'find_thomas'}
+      ]
+    },
+    drawing_room:{loc:'The Drawing Room',title:'The Assembled Suspects',
+      text:[
+        {t:'p',c:'Five people. Five carefully composed expressions of appropriate grief. <strong>Lady Eleanor</strong> by the fire. <strong>Thomas Finch</strong> at the far window. <strong>Vivienne Larue</strong> sketching quietly. <strong>Harold Durst</strong> on his third brandy. <strong>Constance Bell</strong> watching everyone else.'}
+      ],
+      choices:[
+        {text:'Approach Thomas Finch — he looks ready to leave.',tag:'Interview',next:'find_thomas'},
+        {text:'Speak with Lady Eleanor.',tag:'Interview',next:'find_eleanor'},
+        {text:'Approach Vivienne Larue, the painter.',tag:'Interview',next:'find_vivienne'},
+        {text:'Corner Harold Durst at the drinks.',tag:'Interview',next:'find_harold'},
+        {text:"Ask Constance Bell — she's watching everything.",tag:'Interview',next:'find_constance'}
+      ]
+    },
+    find_thomas:{loc:'Drawing Room — Window Alcove',title:'The Solicitor',
+      text:[
+        {t:'p',c:'Finch startles when you approach. He recovers quickly — the professional instinct of a man who practises calm.'},
+        {t:'sp',c:'Thomas Finch'},
+        {t:'q',c:'"I\'ve managed Lord Ashwick\'s affairs for fourteen years. This is... a tremendous shock. A tremendous shock."'},
+        {t:'p',c:'The same phrase twice. People do that when they\'re rehearsing.'}
+      ],
+      choices:[
+        {text:'Show him the letter. Watch his face.',tag:'Confront',next:'thomas_letter'},
+        {text:'Ask what the 9:30 appointment was about.',tag:'Question',next:'thomas_appt'},
+        {text:'Show him the cufflink.',tag:'Confront',next:'thomas_cufflink',requires:'cufflink'}
+      ]
+    },
+    thomas_appt:{loc:'Drawing Room',title:'The 9:30 Meeting',susp:{thomas:6},
+      text:[
+        {t:'sp',c:'Thomas Finch'},
+        {t:'q',c:'"A routine financial discussion. He seemed perfectly well when I left at nine-forty."'},
+        {t:'p',c:'Nine-forty. Body found at ten. Finch was the last person to see Ashwick alive.'}
+      ],
+      choices:[
+        {text:'Press him. What was really discussed?',tag:'Confront',next:'thomas_letter'},
+        {text:'Let him go. Find Lady Eleanor.',tag:'Interview',next:'find_eleanor'}
+      ]
+    },
+    thomas_letter:{loc:'Drawing Room',title:'The Letter',unlocks:['thomas'],susp:{thomas:15},
+      text:[
+        {t:'p',c:"You produce the letter. Finch's composure falls away. Like watching a house of cards in a breeze."},
+        {t:'sp',c:'Thomas Finch'},
+        {t:'q',c:'"That is a private matter. An accounting dispute. He tended toward dramatic language."'},
+        {t:'p',c:'He says "accounting dispute" like a man who knows exactly what it costs.'},
+        {t:'sp',c:'Thomas Finch'},
+        {t:'q',c:'"I want to speak with my own solicitor before I say anything further."'}
+      ],
+      choices:[
+        {text:"You've heard enough. Check the others.",tag:'Continue',next:'find_constance'},
+        {text:'Go to the final accusation.',tag:'Accuse',next:'accuse'}
+      ]
+    },
+    thomas_cufflink:{loc:'Drawing Room',title:'The Window',unlocks:['thomas'],susp:{thomas:10},
+      text:[
+        {t:'p',c:"You hold up the cufflink. Finch glances at his bare wrist and makes the calculation you can see him making."},
+        {t:'sp',c:'Thomas Finch'},
+        {t:'q',c:'"I looked through the window earlier to check if Reginald was ready. The cufflink must have caught the latch. I didn\'t go in."'},
+        {t:'p',c:"A prepared answer. His left hand is shaking slightly."}
+      ],
+      choices:[
+        {text:'Show him the letter as well.',tag:'Confront',next:'thomas_letter'},
+        {text:'You have enough. Make the accusation.',tag:'Accuse',next:'accuse'}
+      ]
+    },
+    find_eleanor:{loc:'Fireside',title:'The Widow',
+      text:[
+        {t:'p',c:'Lady Eleanor watches you approach with the settled patience of a woman who has learned to use stillness as armour.'},
+        {t:'sp',c:'Lady Eleanor Ashwick'},
+        {t:'q',c:'"I found him. I\'d gone to bring his evening medicine. The light under the door didn\'t move for twenty minutes. So I called for Graves and the key."'},
+        {t:'p',c:'A rehearsed story told very naturally.'}
+      ],
+      choices:[
+        {text:'Ask about the glove found in the study.',tag:'Confront',next:'eleanor_glove',requires:'glove'},
+        {text:'Ask about the new will.',tag:'Confront',next:'eleanor_will',requires:'will'},
+        {text:'Accept her account for now.',tag:'Continue',next:'find_constance'}
+      ]
+    },
+    eleanor_glove:{loc:'Fireside',title:'The Monogrammed Glove',unlocks:['eleanor'],susp:{eleanor:6},
+      text:[
+        {t:'sp',c:'Lady Eleanor Ashwick'},
+        {t:'q',c:'"That is mine. I visited at half past nine to remind Reginald dinner was cold. I was annoyed. I must have dropped it."'},
+        {t:'p',c:"She meets your eyes without blinking. Either innocent and matter-of-fact — or the coolest murderer you've ever met."}
+      ],
+      choices:[
+        {text:'Ask about the amended will.',tag:'Confront',next:'eleanor_will'},
+        {text:'This changes the timeline. Find Finch.',tag:'Interview',next:'find_thomas'}
+      ]
+    },
+    eleanor_will:{loc:'Fireside',title:'The Amended Will',unlocks:['eleanor'],susp:{eleanor:5},
+      text:[
+        {t:'sp',c:'Lady Eleanor Ashwick'},
+        {t:'q',c:'"He told me about it last week. Twenty-two years, and he was leaving it all to charity. I was... not pleased."'},
+        {t:'sp',c:'Lady Eleanor Ashwick'},
+        {t:'q',c:'"But I did not kill my husband. Thomas Finch had considerably more to lose."'}
+      ],
+      choices:[
+        {text:'Confront Finch.',tag:'Interview',next:'find_thomas'},
+        {text:'Go to the final accusation.',tag:'Accuse',next:'accuse'}
+      ]
+    },
+    find_constance:{loc:'Near the Bookshelves',title:'The Observant Niece',clues:['pawnticket'],unlocks:['constance'],susp:{constance:-8,thomas:6},
+      text:[
+        {t:'sp',c:'Constance Bell'},
+        {t:'q',c:'"Yes, I took the candelabra. I needed money. I\'m not proud of it. But I didn\'t kill him."'},
+        {t:'clue',id:'pawnticket'},
+        {t:'sp',c:'Constance Bell'},
+        {t:'q',c:'"And I saw Thomas Finch leaving the study at quarter to ten. He looked like a man who\'d just done something he can\'t undo."'}
+      ],
+      choices:[
+        {text:'That confirms it. Find Finch now.',tag:'Confront',next:'find_thomas'},
+        {text:'Proceed to the accusation.',tag:'Accuse',next:'accuse'}
+      ]
+    },
+    find_vivienne:{loc:'By the Tall Windows',title:'The Painter',susp:{vivienne:4},
+      text:[
+        {t:'p',c:'Vivienne Larue does not look up from her sketchbook. Her charcoal moves in slow, deliberate lines — a woman composing herself as much as the scene before her.'},
+        {t:'sp',c:'Vivienne Larue'},
+        {t:'q',c:'"You have the look of a man with questions. I have the look of a woman who was three rooms away. We shall get along splendidly."'},
+        {t:'p',c:'She says it lightly. Her charcoal has stopped moving.'}
+      ],
+      choices:[
+        {text:'Show her the locket from the study.',tag:'Confront',next:'vivienne_locket',requires:'locket'},
+        {text:'Corner Harold Durst instead.',tag:'Interview',next:'find_harold'},
+        {text:'Return to the others.',tag:'Continue',next:'find_constance'}
+      ]
+    },
+    vivienne_locket:{loc:'By the Tall Windows',title:'The Locket',unlocks:['vivienne'],susp:{vivienne:12},
+      text:[
+        {t:'p',c:'You open the locket between you. Two portraits — a woman unmistakably her, and a boy of perhaps seven. Her composure holds. Barely.'},
+        {t:'sp',c:'Vivienne Larue'},
+        {t:'q',c:'"Reginald and I were... close, a long time ago. The boy is our business and no one else\'s. He threatened to make it everyone\'s. That is a motive, I know it. It is not a murder."'},
+        {t:'p',c:'A secret worth killing to keep — or one worth far too much to risk the noise of killing for.'}
+      ],
+      choices:[
+        {text:'Note it, and speak to Harold Durst.',tag:'Continue',next:'find_harold'},
+        {text:'You have enough. Make the accusation.',tag:'Accuse',next:'accuse'}
+      ]
+    },
+    find_harold:{loc:'At the Drinks Cabinet',title:'The Partner',susp:{harold:6},
+      text:[
+        {t:'p',c:'Harold Durst pours himself another and does not offer you one. A big, self-made man, entirely aware he is the only person in the room who has ever worked with his hands.'},
+        {t:'sp',c:'Harold Durst'},
+        {t:'q',c:'"Reginald wanted to dissolve the venture. Would have ruined me — I shan\'t pretend otherwise. But a dead partner pays no debts either. I\'d have gained nothing by his dying tonight."'},
+        {t:'p',c:'You notice his hands. Scrubbed pink, the nails clean as a surgeon\'s — unusual, for a man on his third brandy at a dinner.'}
+      ],
+      choices:[
+        {text:'Ask why his hands are so clean.',tag:'Confront',next:'harold_hands'},
+        {text:'Speak with Vivienne Larue.',tag:'Interview',next:'find_vivienne'},
+        {text:'Find Thomas Finch.',tag:'Interview',next:'find_thomas'}
+      ]
+    },
+    harold_hands:{loc:'At the Drinks Cabinet',title:'The Scrubbed Hands',unlocks:['harold'],susp:{harold:-14},
+      text:[
+        {t:'sp',c:'Harold Durst'},
+        {t:'q',c:'"The garden, before dinner. Repotting Reginald\'s wretched orchids — his gardener\'s off sick and he asked it as a favour. Soil under the nails. So I scrubbed up. That a crime now?"'},
+        {t:'p',c:'It is either the plain truth, or the most mundane alibi a guilty man ever reached for. Both do happen.'}
+      ],
+      choices:[
+        {text:'Speak with Vivienne Larue.',tag:'Interview',next:'find_vivienne'},
+        {text:'Confront Thomas Finch.',tag:'Interview',next:'find_thomas'},
+        {text:'Make the accusation.',tag:'Accuse',next:'accuse'}
+      ]
+    },
+    accuse:{special:'accuse'}
+  },
+  endings:{
+    correct:{headline:'Well deduced, Detective.',text:"Thomas Finch had been embezzling from the Ashwick estate for three years. Summoned for a final confrontation, he made a desperate choice.",
+      reveal:"Finch arrived at 9:30 with whisky already prepared with a sedative from his doctor's prescription. He intended only to incapacitate Ashwick and steal the incriminating ledger — but the dose was too strong for Ashwick's weakened heart.\n\nHe locked the study door with his own spare key, eased out through the loose-latched window, and drew it shut behind him. Back in the drawing room, he had fourteen minutes before Lady Eleanor raised the alarm.\n\nHe left behind a cufflink, an appointment entry, and a letter in the dead man's hand. Three mistakes. You found them all."},
+    wrong:{headline:'The killer walks free.',
+      reveal:"The true killer was <em>Thomas Finch, the Solicitor</em>, who had embezzled from the estate for three years and killed to prevent exposure.\n\nThe key evidence: the appointment book (9:30 meeting), the threatening letter, and the monogrammed cufflink at the window. Together they placed Finch in the room at the time of death with clear motive."}
+  }
+};
+
+// ════════════════════════════════════════════════
+// CASE 2: DEATH AT DUNMORE PARK
+// ════════════════════════════════════════════════
+const CASE2={
+  id:'dunmore',subtitle:'Case II',title:'Death at Dunmore Park',
+  blurb:'A summer garden party. Champagne laced with something lethal. Among these charming guests, one is not grieving.',
+  meta:{distance:'4.2 mi',time:'~44 min',year:'1931'},ambient:'outdoor',
+  correctKiller:'cecily',correctMotive:'blackmail',
+  suspects:{
+    cecily:{name:'Cecily Vane',role:'The Hostess',av:'👑',bio:'Radiant, formidable, and the last person to handle the champagne. A widow for the second time.',motive:'She was being blackmailed — and the victim held the proof.',secret:'Seen slipping something from her evening bag into the ice bucket at 8:15.',suspicion:70,secretOn:false},
+    rupert:{name:'Rupert Ashby',role:'The Heir',av:'🎩',bio:"The victim's son and sole beneficiary. Charming in the way that people with debts are charming.",motive:"His father's estate would clear all debts. He was running out of time.",secret:'His pocket diary shows a meeting with a moneylender the morning of the party.',suspicion:65,secretOn:false},
+    diana:{name:'Diana Frost',role:'The Journalist',av:'📰',bio:'Society columnist with sharper ears than she lets on. Claims she was invited. Unclear by whom.',motive:'The victim had fed her false information that ruined her career — she wanted revenge.',secret:'"He had it coming. Twice." Overheard by two witnesses before the body was found.',suspicion:55,secretOn:false},
+    felix:{name:'Felix Crane',role:'The Doctor',av:'🩺',bio:'The family physician. Quiet, precise, deeply devoted to the household.',motive:"The victim knew something about Felix's past that would end his practice.",secret:'His medical bag is missing one small bottle of potassium chlorate solution.',suspicion:50,secretOn:false},
+    margot:{name:'Margot Wells',role:'The Secretary',av:'📋',bio:"The victim's long-suffering personal secretary of eleven years.",motive:'She discovered she was being dismissed without a pension after decades of loyal service.',secret:'She typed and then deleted a letter of resignation the week before the party.',suspicion:35,secretOn:false}
+  },
+  motives:[
+    {id:'inheritance',text:'To inherit the estate before debts destroyed everything'},
+    {id:'blackmail',text:'To silence a blackmailer before they could reveal everything'},
+    {id:'revenge',text:'Personal revenge for a career-destroying betrayal'},
+    {id:'secret',text:'To protect a dangerous professional secret'},
+    {id:'dismissal',text:'Rage at a callous and unjust dismissal'}
+  ],
+  clues:{
+    icebucket:{icon:'🍾',name:'The Contaminated Ice Bucket',desc:"Traces of a soluble compound consistent with the cause of death. One person handled it alone at 8:15.",tag:'Physical Evidence · Garden'},
+    diary:{icon:'📓',name:"Rupert's Pocket Diary",desc:'"Harwick & Sons — noon. Final notice." The party was two days later.',tag:'Document · Personal'},
+    blackmail:{icon:'✉️',name:'The Blackmail Letter',desc:'Found in the study. To Cecily Vane: "Pay the remainder by the 30th or I publish everything." The stationery is the victim\'s own.',tag:'Document · Study'},
+    bottle:{icon:'⚗️',name:'The Missing Bottle',desc:"Dr. Crane's bag is one small bottle short. Potassium chlorate solution — used medically in small doses, lethal in larger ones.",tag:'Physical Evidence · Medical Bag'},
+    ribbon:{icon:'🎀',name:'The Torn Evening Bag',desc:"A silk ribbon caught on the ice bucket stand. The colour matches the bag Cecily Vane carried all evening.",tag:'Physical Evidence · Garden'},
+    overheard:{icon:'🗣️',name:"Diana's Remark",desc:'"He had it coming. Twice." Confirmed by two witnesses, said unprompted shortly before the body was found.',tag:'Witness Account · Terrace'},
+    glass:{icon:'🥂',name:"The Victim's Glass",desc:"The only glass with residue. Handed directly to the victim by the hostess. Fingerprints match Cecily Vane.",tag:'Physical Evidence · Garden'},
+    dismissal:{icon:'📄',name:'The Unsent Letter',desc:"Recovered from the secretary's typewriter. A bitter resignation letter, dated five days prior. Never sent.",tag:'Document · Study'}
+  },
+  scenes:{
+    intro:{loc:'Dunmore Park — The South Lawn',title:'A Garden Party Gone Wrong',
+      text:[
+        {t:'p',c:'July. The kind of evening that makes England forgive its winters. Lanterns in the chestnut trees, a string quartet, and somewhere among the guests on this lawn — <em>a murderer with clean hands and a full glass</em>.'},
+        {t:'p',c:'Arthur Dunmore, 62, industrialist and not especially mourned, was found in his garden chair during the third course. Glass still in his hand.'},
+        {t:'sp',c:'Sergeant Webb'},
+        {t:'q',c:'"Guests are on the lawn. Family\'s inside. Physician confirms it wasn\'t natural. You\'ve got about an hour before the county inspector arrives and makes a mess of it."'}
+      ],
+      choices:[
+        {text:'Examine the garden — start at the scene.',tag:'Investigate',next:'examine_scene'},
+        {text:'Speak with Cecily Vane, the hostess.',tag:'Interview',next:'find_cecily'},
+        {text:'Talk to Rupert Ashby, the heir.',tag:'Interview',next:'find_rupert'}
+      ]
+    },
+    examine_scene:{loc:'The South Lawn',title:'Where He Fell',clues:['glass','icebucket'],
+      text:[
+        {t:'p',c:"Dunmore sits in a wicker chair as if he simply stopped. His champagne glass — <em>his alone</em> among all the guests — still warm from his hand."},
+        {t:'clue',id:'glass'},
+        {t:'p',c:'The ice bucket nearest his chair is slightly off-angle. The stand catches the lantern light — something snagged on it.'},
+        {t:'clue',id:'icebucket'},
+        {t:'p',c:"The compound, per Dr. Crane's assessment, would have taken twenty to thirty minutes to act. It was in the glass before the party began."}
+      ],
+      choices:[
+        {text:'Look more carefully at the ice bucket stand.',tag:'Search',next:'find_ribbon'},
+        {text:'Go to the study and look for motive.',tag:'Investigate',next:'study_search'},
+        {text:'Find who handled the champagne bucket.',tag:'Interview',next:'find_cecily'}
+      ]
+    },
+    find_ribbon:{loc:'The South Lawn',title:'A Thread of Evidence',clues:['ribbon'],
+      text:[
+        {t:'p',c:'Caught on the edge of the ice bucket stand: a length of silk ribbon. Rose-coloured, fine quality. Torn, not cut.'},
+        {t:'clue',id:'ribbon'},
+        {t:'p',c:"You scan the guests. Cecily Vane's evening bag has a frayed edge where a ribbon has been. She hasn't noticed. Or she's pretending not to."}
+      ],
+      choices:[
+        {text:'Confront Cecily Vane about the ribbon.',tag:'Confront',next:'cecily_ribbon'},
+        {text:'Check the study for the blackmail letter first.',tag:'Investigate',next:'study_search'}
+      ]
+    },
+    study_search:{loc:"Dunmore's Study",title:'What He Was Hiding',clues:['blackmail','dismissal'],
+      text:[
+        {t:'p',c:'The study is cool and undisturbed. Dunmore was a man who filed things — which means everything incriminating is exactly where he left it.'},
+        {t:'clue',id:'blackmail'},
+        {t:'p',c:"In the secretary's adjoining room, the typewriter has a memory roll. You unspool it carefully."},
+        {t:'clue',id:'dismissal'}
+      ],
+      choices:[
+        {text:'The blackmail letter points to Cecily Vane.',tag:'Confront',next:'find_cecily'},
+        {text:"Check Dr. Crane's bag — someone sourced the poison.",tag:'Investigate',next:'find_felix'}
+      ]
+    },
+    find_cecily:{loc:'The Terrace',title:'The Hostess',
+      text:[
+        {t:'p',c:'Cecily Vane receives you with the particular grace of a woman managing catastrophe. Her composure is extraordinary. So is her reason to need it.'},
+        {t:'sp',c:'Cecily Vane'},
+        {t:'q',c:'"Arthur was my oldest friend. This is the worst evening of my life."'},
+        {t:'p',c:"She doesn't look like a woman having the worst evening of her life. She looks like a woman who has rehearsed for it."}
+      ],
+      choices:[
+        {text:'Show her the ribbon.',tag:'Confront',next:'cecily_ribbon',requires:'ribbon'},
+        {text:'Show her the blackmail letter.',tag:'Confront',next:'cecily_letter',requires:'blackmail'},
+        {text:'Ask who handled the champagne at 8:15.',tag:'Question',next:'cecily_champagne'}
+      ]
+    },
+    cecily_champagne:{loc:'The Terrace',title:'The Ice Bucket',
+      text:[
+        {t:'sp',c:'Cecily Vane'},
+        {t:'q',c:'"I arranged the drinks personally, yes. I always do. Arthur had particular preferences. I handed him his glass at eight-thirty. As I do every year."'},
+        {t:'p',c:'She meets your eyes and holds them. A small, involuntary tension in her left hand.'}
+      ],
+      choices:[
+        {text:'Show her the blackmail letter.',tag:'Confront',next:'cecily_letter',requires:'blackmail'},
+        {text:'Show her the torn ribbon.',tag:'Confront',next:'cecily_ribbon',requires:'ribbon'},
+        {text:"Look for the doctor's missing bottle.",tag:'Investigate',next:'find_felix'}
+      ]
+    },
+    cecily_ribbon:{loc:'The Terrace',title:'The Torn Bag',unlocks:['cecily'],
+      text:[
+        {t:'p',c:"You hold up the ribbon. Cecily glances at her bag — just once, involuntarily — and something shifts in her expression."},
+        {t:'sp',c:'Cecily Vane'},
+        {t:'q',c:'"I was adjusting the ice bucket. The stand is loose — I\'ve been meaning to have it fixed."'},
+        {t:'p',c:"A prepared answer. Her hand has been perfectly still since the moment you produced the ribbon."}
+      ],
+      choices:[
+        {text:'Show her the blackmail letter.',tag:'Confront',next:'cecily_letter',requires:'blackmail'},
+        {text:'Proceed to the accusation.',tag:'Accuse',next:'accuse'}
+      ]
+    },
+    cecily_letter:{loc:'The Terrace',title:'The Blackmail',unlocks:['cecily'],
+      text:[
+        {t:'p',c:"At the sight of the letter, Cecily Vane's composure finally — quietly — breaks. Not dramatically. Like a watch winding down."},
+        {t:'sp',c:'Cecily Vane'},
+        {t:'q',c:'"He had been bleeding me for two years. The things he knew about my first marriage — what really happened in Cannes — he would have destroyed me."'},
+        {t:'sp',c:'Cecily Vane'},
+        {t:'q',c:'"I didn\'t want him dead. I wanted him to <em>stop</em>."'}
+      ],
+      choices:[
+        {text:'Make the accusation.',tag:'Accuse',next:'accuse'},
+        {text:"Check the doctor's bag first.",tag:'Investigate',next:'find_felix'}
+      ]
+    },
+    find_rupert:{loc:'Inside — The Drawing Room',title:'The Heir',clues:['diary'],
+      text:[
+        {t:'p',c:"Rupert Ashby is pouring himself a drink he clearly doesn't need. His charm is automatic — the reflex of a man used to needing things from people."},
+        {t:'sp',c:'Rupert Ashby'},
+        {t:'q',c:'"Dreadful business. Father and I weren\'t close, but — well. Family\'s family."'},
+        {t:'p',c:"His jacket pocket is slightly bulging. You ask, politely, to see his diary."},
+        {t:'clue',id:'diary'}
+      ],
+      choices:[
+        {text:'Press him on the moneylender meeting.',tag:'Confront',next:'rupert_debt'},
+        {text:'Leave him. Find Cecily Vane.',tag:'Interview',next:'find_cecily'}
+      ]
+    },
+    rupert_debt:{loc:'The Drawing Room',title:'The Debt',unlocks:['rupert'],
+      text:[
+        {t:'sp',c:'Rupert Ashby'},
+        {t:'q',c:'"There are debts, yes. Father knew. He\'d threatened to disinherit me rather than pay them off. Charming man."'},
+        {t:'p',c:"He drains his drink. Not quite grief. Relief? It's hard to be sure, and he seems to know it looks bad."},
+        {t:'sp',c:'Rupert Ashby'},
+        {t:'q',c:'"But I\'ve been inside all evening. Cecily can confirm that."'}
+      ],
+      choices:[
+        {text:'Verify his alibi with Cecily.',tag:'Interview',next:'find_cecily'},
+        {text:"Check the doctor's bag.",tag:'Investigate',next:'find_felix'}
+      ]
+    },
+    find_felix:{loc:'The Garden — By the Hedgerow',title:'The Doctor',clues:['bottle'],
+      text:[
+        {t:'p',c:"Dr. Crane is a quiet man — the kind whose presence is always useful and never noticed. He's already re-examining his medical bag when you find him."},
+        {t:'clue',id:'bottle'},
+        {t:'sp',c:'Dr. Felix Crane'},
+        {t:'q',c:'"A bottle of potassium chlorate solution is missing. Small, unlabelled. The bag was in my coat — except I left my coat on the terrace chair at eight o\'clock."'},
+        {t:'p',c:"The terrace. Where Cecily Vane was standing at 8:15."}
+      ],
+      choices:[
+        {text:'Confront Cecily Vane with this.',tag:'Confront',next:'find_cecily'},
+        {text:'Speak to Diana Frost about what she saw.',tag:'Interview',next:'find_diana'}
+      ]
+    },
+    find_diana:{loc:'The Terrace Steps',title:'The Journalist',clues:['overheard'],
+      text:[
+        {t:'sp',c:'Diana Frost'},
+        {t:'q',c:'"I said it and I\'ll say it again. He had it coming. Twice over. Arthur Dunmore destroyed my career with a lie in 1927. I came here tonight to tell him so."'},
+        {t:'p',c:"She's the kind of angry that's been aged into something clean and focused."},
+        {t:'clue',id:'overheard'},
+        {t:'sp',c:'Diana Frost'},
+        {t:'q',c:'"But I didn\'t kill him. Cecily Vane was at that ice bucket for five full minutes at 8:15. I was watching. I\'m always watching."'}
+      ],
+      choices:[
+        {text:"That's enough. Confront Cecily now.",tag:'Confront',next:'cecily_ribbon'},
+        {text:'Make the accusation.',tag:'Accuse',next:'accuse'}
+      ]
+    },
+    accuse:{special:'accuse'}
+  },
+  endings:{
+    correct:{headline:'Brilliantly done.',text:"Cecily Vane had been blackmailed by Arthur Dunmore for two years. She sourced the compound from Dr. Crane's bag and prepared the glass during the party setup.",
+      reveal:"Cecily stole the potassium chlorate solution from Dr. Crane's coat at eight o'clock and dissolved it in the champagne she personally prepared for Dunmore — an innocent tradition she weaponised.\n\nThe ribbon from her evening bag was torn when she adjusted the ice bucket position to ensure Dunmore's glass would be closest to him. A detail she hadn't accounted for.\n\nShe hadn't wanted him dead. She had wanted him to stop. But two years of blackmail had pushed her somewhere she couldn't come back from.\n\nThe ribbon. The letter. The missing bottle. Three things she couldn't control. You found them all."},
+    wrong:{headline:'The killer escapes.',
+      reveal:"The true killer was <em>Cecily Vane, the Hostess</em>. Arthur Dunmore had been blackmailing her for two years over events from her past.\n\nShe stole potassium chlorate from Dr. Crane's medical bag and dissolved it in Dunmore's champagne — which she prepared personally every year, a tradition she weaponised. The key evidence: the torn ribbon at the ice bucket, the blackmail letter in the study, and the missing bottle from Crane's bag."}
+  }
+};
+
+const CASES={ashwick:CASE1,dunmore:CASE2};
+
+// ════════════════════════════════════════════════
+// GAME STATE
+// ════════════════════════════════════════════════
+let G={currentCase:null,currentScene:null,collectedClues:[],visitedScenes:[],accusedSuspect:null,accusedMotive:null,solvedCases:[],meta:{totalSolved:0,weekKey:'',weekCount:0},mode:'investigation'};
+let advTimer=null,advSecs=0;
+
+const RANKS=['Constable','Detective','Inspector','Chief Inspector','Det. Superintendent','The Blackwood Chair'];
+function rankFor(total){const lvl=Math.min(6,1+Math.floor((total||0)/2));return{lvl,name:RANKS[lvl-1]};}
+function curWeekKey(){const d=new Date();const s=new Date(d.getFullYear(),0,1);const w=Math.ceil((((d-s)/86400000)+s.getDay()+1)/7);return d.getFullYear()+'-W'+w;}
+function ensureWeek(){const k=curWeekKey();if(G.meta.weekKey!==k){G.meta.weekKey=k;G.meta.weekCount=0;}}
+
+function loadState(){try{const s=localStorage.getItem('motr2');if(s){const p=JSON.parse(s);G.solvedCases=p.solvedCases||[];G.meta=Object.assign({totalSolved:(p.solvedCases||[]).length,weekKey:'',weekCount:0},p.meta||{});}}catch(e){}ensureWeek();}
+function saveState(){try{localStorage.setItem('motr2',JSON.stringify({solvedCases:G.solvedCases,meta:G.meta}));}catch(e){}}
+
+// ════════════════════════════════════════════════
+// SCREENS
+// ════════════════════════════════════════════════
+function showPanel(name){
+  resumeAC();sfxTick();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById('screen-'+name);
+  el.classList.add('active','fade-in');
+  setTimeout(()=>el.classList.remove('fade-in'),400);
+  if(name==='suspects')renderSuspects();
+  if(name==='clues')renderClues();
+  if(name==='accuse')renderAccuse();
+  if(name==='home')renderHome();
+}
+
+// ════════════════════════════════════════════════
+// HOME
+// ════════════════════════════════════════════════
+function renderHome(){
+  stopAdv();stopFootsteps();stopAmbient();
+  ensureWeek();
+  // meta: level, rank, weekly investigation
+  const {lvl,name}=rankFor(G.meta.totalSolved||0);
+  document.getElementById('home-level').textContent=lvl;
+  document.getElementById('home-rank').textContent=name+' · Blackwood Agency';
+  const count=Math.min(5,G.meta.weekCount||0);
+  const pct=Math.round(count/5*100), rem=5-count;
+  document.getElementById('wk-count').innerHTML=count+'/5<br><small>Cases</small>';
+  document.getElementById('wk-fill').style.width=pct+'%';
+  document.getElementById('wk-pct').textContent=pct+'% Complete';
+  document.getElementById('wk-remaining').textContent=rem+(rem===1?' case remaining':' cases remaining');
+  // parchment case cards
+  const disp=[{icon:'📍',cls:'navy',sub:'A locked-room mystery'},{icon:'▶',cls:'maroon',sub:'A poisoning at the party'}];
+  const list=document.getElementById('cases-list');
+  list.innerHTML='';
+  [CASE1,CASE2].forEach((c,i)=>{
+    const solved=G.solvedCases.includes(c.id);
+    const locked=i===1&&!G.solvedCases.includes(CASE1.id);
+    const st=solved?'solved':locked?'locked':'new';
+    const stTxt=solved?'✓ Solved':locked?'🔒 Locked':'● New Case';
+    const d=disp[i]||disp[0];
+    const card=document.createElement('div');
+    card.className='pcase'+(locked?' locked':'');
+    card.style.animationDelay=(i*.08)+'s';
+    card.innerHTML=`<div class="pcase-bar ${d.cls}"></div><div class="pcase-crest ${d.cls}">${d.icon}</div><div class="pcase-ttl">${c.title}</div><div class="pcase-sub">${d.sub}</div><div class="pcase-pill">${(c.meta.time||'').toUpperCase()}</div><div class="pcase-modes">🚶 Investigation · 🏃 Pursuit</div><div class="pcase-tag ${st}">${stTxt}</div>`;
+    if(!locked)card.addEventListener('click',()=>openModeSelect(c.id));
+    list.appendChild(card);
+  });
+}
+
+// ════════════════════════════════════════════════
+// RUN MODE SELECT
+// ════════════════════════════════════════════════
+let pendingCase=null;
+function openModeSelect(caseId){
+  pendingCase=caseId;resumeAC();sfxTick();
+  document.getElementById('mm-title').textContent=CASES[caseId].title;
+  document.getElementById('mode-modal').classList.add('show');
+}
+function closeModeSelect(){
+  document.getElementById('mode-modal').classList.remove('show');pendingCase=null;
+}
+function chooseMode(mode){
+  const id=pendingCase;closeModeSelect();
+  if(id)startCase(id,mode);
+}
+
+// ════════════════════════════════════════════════
+// START CASE
+// ════════════════════════════════════════════════
+function startCase(caseId,mode){
+  resumeAC();
+  G.mode=mode||'investigation';
+  G.currentCase=caseId;G.collectedClues=[];G.visitedScenes=[];G.accusedSuspect=null;G.accusedMotive=null;
+  const cd=CASES[caseId];
+  Object.values(cd.suspects).forEach(s=>{if(s.sus0===undefined)s.sus0=s.suspicion;s.suspicion=s.sus0;s.secretOn=false;});
+  document.getElementById('clue-count').textContent='0';
+  document.getElementById('hud-case-lbl').textContent=cd.subtitle;
+  const pursuit=G.mode==='pursuit';
+  const hm=document.getElementById('hud-mode');
+  if(hm)hm.textContent=pursuit?'🏃 Pursuit':'🚶 Investigation';
+  showPanel('run');
+  startAmbient(cd.ambient);
+  startFootsteps(pursuit?330:520);
+  loadScene('intro');
+}
+
+// ════════════════════════════════════════════════
+// SCENE ENGINE
+// ════════════════════════════════════════════════
+function loadScene(sceneId){
+  stopAdv();
+  const cd=CASES[G.currentCase];
+  const scene=cd.scenes[sceneId];
+  if(!scene)return;
+  if(scene.special==='accuse'){showPanel('accuse');return;}
+
+  G.currentScene=sceneId;
+  const firstVisit=!G.visitedScenes.includes(sceneId);
+  if(firstVisit)G.visitedScenes.push(sceneId);
+
+  if(scene.unlocks)scene.unlocks.forEach(sid=>{if(cd.suspects[sid])cd.suspects[sid].secretOn=true;});
+
+  if(firstVisit&&scene.susp){
+    for(const k in scene.susp){
+      const s=cd.suspects[k];
+      if(s)s.suspicion=Math.max(2,Math.min(99,s.suspicion+scene.susp[k]));
+    }
+  }
+
+  if(scene.clues){
+    scene.clues.forEach(cid=>{
+      if(!G.collectedClues.includes(cid)){
+        G.collectedClues.push(cid);
+        showToast(cd.clues[cid].name);
+        sfxChime();
+      }
+    });
+    document.getElementById('clue-count').textContent=G.collectedClues.length;
+  }
+
+  document.getElementById('hud-loc').textContent=scene.loc;
+  sfxPage();sfxType(true);
+
+  const content=document.getElementById('run-content');
+  content.innerHTML='';
+
+  const lt=document.createElement('div');lt.className='sloc';lt.textContent=scene.loc;content.appendChild(lt);
+  const h=document.createElement('h2');h.className='sh';h.textContent=scene.title;content.appendChild(h);
+
+  scene.text.forEach(b=>{
+    if(b.t==='p'){const el=document.createElement('p');el.className='sp_';el.innerHTML=b.c;content.appendChild(el);}
+    else if(b.t==='sp'){const el=document.createElement('div');el.className='sspk';el.textContent=b.c;content.appendChild(el);}
+    else if(b.t==='q'){const el=document.createElement('div');el.className='sq';el.textContent=b.c;content.appendChild(el);}
+    else if(b.t==='clue'){
+      const cl=cd.clues[b.id];if(!cl)return;
+      const card=document.createElement('div');card.className='clue-pop';
+      card.innerHTML=`<div class="ci">${cl.icon}</div><div><div class="clabel">Evidence Collected</div><div class="cname">${cl.name}</div><div class="cdesc">${cl.desc}</div></div>`;
+      content.appendChild(card);
+    }
+  });
+  content.scrollTop=0;
+
+  const wrap=document.getElementById('choices-wrap');
+  wrap.innerHTML='';
+  const valid=scene.choices.filter(c=>!c.requires||G.collectedClues.includes(c.requires));
+  valid.forEach(choice=>{
+    const btn=document.createElement('button');btn.className='choice-big';
+    btn.innerHTML=`<span class="carrow">›</span><span>${choice.tag?`<span class="ctag">${choice.tag}</span>`:''}${choice.text}</span>`;
+    btn.addEventListener('click',()=>{sfxTick();stopAdv();choice.next==='accuse'?showPanel('accuse'):loadScene(choice.next);});
+    wrap.appendChild(btn);
+  });
+
+  if(valid.length>0){
+    const pursuit=G.mode==='pursuit';
+    const secs=(pursuit?8:14)+valid.length*(pursuit?2:3);
+    startAdv(secs,()=>{sfxTick();valid[0].next==='accuse'?showPanel('accuse'):loadScene(valid[0].next);});
+  }
+}
+
+// ════════════════════════════════════════════════
+// AUTO-ADVANCE
+// ════════════════════════════════════════════════
+function startAdv(secs,cb){
+  stopAdv();advSecs=secs;
+  const wrap=document.getElementById('adv-wrap'),fill=document.getElementById('adv-fill'),secsEl=document.getElementById('adv-secs');
+  wrap.classList.add('vis');fill.style.transition='none';fill.style.width='100%';secsEl.textContent=advSecs;
+  setTimeout(()=>{fill.style.transition=`width ${secs}s linear`;fill.style.width='0%';},50);
+  advTimer=setInterval(()=>{advSecs--;secsEl.textContent=advSecs;if(advSecs<=0){stopAdv();cb();}},1000);
+}
+function stopAdv(){
+  if(advTimer){clearInterval(advTimer);advTimer=null;}
+  const w=document.getElementById('adv-wrap');if(w)w.classList.remove('vis');
+}
+
+// ════════════════════════════════════════════════
+// SUSPECTS
+// ════════════════════════════════════════════════
+function renderSuspects(){
+  const cd=CASES[G.currentCase];if(!cd)return;
+  const list=document.getElementById('suspects-list');list.innerHTML='';
+  Object.entries(cd.suspects).forEach(([id,s],i)=>{
+    const bc=s.suspicion>60?'#c0282a':s.suspicion>45?'#d4aa1a':'#2a9090';
+    const card=document.createElement('div');card.className='susp-card';card.style.animationDelay=(i*.07)+'s';
+    card.innerHTML=`<div class="susp-top"><div class="susp-av">${s.av}</div><div><div class="susp-name">${s.name}</div><div class="susp-role">${s.role}</div><div class="susp-bio">${s.bio}</div></div></div><div class="sus-bar"><div class="sus-lbl">Suspicion</div><div class="sus-track"><div class="sus-fill" style="width:${s.suspicion}%;background:${bc}"></div></div><div class="sus-pct">${s.suspicion}%</div></div>${s.secretOn?`<div class="sus-secret on"><div class="sus-secret-lbl">🔍 Secret Uncovered</div>${s.secret}</div>`:''}`;
+    list.appendChild(card);
+  });
+}
+
+// ════════════════════════════════════════════════
+// CLUES
+// ════════════════════════════════════════════════
+function renderClues(){
+  const cd=CASES[G.currentCase];
+  const list=document.getElementById('journal-list');list.innerHTML='';
+  if(!cd||G.collectedClues.length===0){list.innerHTML='<div class="j-empty">No evidence yet.<br>Begin your investigation.</div>';return;}
+  G.collectedClues.forEach((cid,i)=>{
+    const cl=cd.clues[cid];if(!cl)return;
+    const item=document.createElement('div');item.className='j-clue';item.style.animationDelay=(i*.06)+'s';
+    item.innerHTML=`<div class="j-icon">${cl.icon}</div><div><div class="j-name">${cl.name}</div><div class="j-text">${cl.desc}</div><div class="j-tag">${cl.tag}</div></div>`;
+    list.appendChild(item);
+  });
+}
+
+// ════════════════════════════════════════════════
+// ACCUSATION
+// ════════════════════════════════════════════════
+function renderAccuse(){
+  stopAdv();stopFootsteps();
+  const cd=CASES[G.currentCase];if(!cd)return;
+  const sd=document.getElementById('acc-suspects');sd.innerHTML='';
+  Object.entries(cd.suspects).forEach(([id,s])=>{
+    const opt=document.createElement('div');opt.className='acc-opt'+(G.accusedSuspect===id?' sel':'');
+    opt.onclick=()=>{G.accusedSuspect=id;sfxTick();renderAccuse();};
+    opt.innerHTML=`<div class="acc-radio"></div><div class="acc-txt">${s.av} ${s.name} — <em>${s.role}</em></div>`;
+    sd.appendChild(opt);
+  });
+  const md=document.getElementById('acc-motives');md.innerHTML='';
+  cd.motives.forEach(m=>{
+    const opt=document.createElement('div');opt.className='acc-opt'+(G.accusedMotive===m.id?' sel':'');
+    opt.onclick=()=>{G.accusedMotive=m.id;sfxTick();renderAccuse();};
+    opt.innerHTML=`<div class="acc-radio"></div><div class="acc-txt">${m.text}</div>`;
+    md.appendChild(opt);
+  });
+  document.getElementById('btn-accuse').classList.toggle('ready',!!(G.accusedSuspect&&G.accusedMotive));
+}
+
+function submitAccusation(){
+  if(!G.accusedSuspect||!G.accusedMotive)return;
+  const cd=CASES[G.currentCase];
+  const correct=G.accusedSuspect===cd.correctKiller&&G.accusedMotive===cd.correctMotive;
+  if(correct){
+    if(!G.solvedCases.includes(G.currentCase))G.solvedCases.push(G.currentCase);
+    ensureWeek();
+    G.meta.totalSolved=(G.meta.totalSolved||0)+1;
+    G.meta.weekCount=(G.meta.weekCount||0)+1;
+    saveState();
+  }
+  showEnding(correct);
+  if(correct){[523,659,783,1046,1318].forEach((f,i)=>tone(f,'sine',.9,.1,i*.12));}
+  else{[220,196,174].forEach((f,i)=>tone(f,'sawtooth',.6,.08,i*.15));}
+}
+
+// ════════════════════════════════════════════════
+// ENDING
+// ════════════════════════════════════════════════
+function showEnding(correct){
+  showPanel('ending');stopAmbient();stopFootsteps();
+  const cd=CASES[G.currentCase];
+  const suspect=cd.suspects[G.accusedSuspect];
+  const motive=cd.motives.find(m=>m.id===G.accusedMotive);
+  const e=cd.endings;
+  const body=document.getElementById('ending-body');
+  if(correct){
+    body.innerHTML=`<div class="end-verdict ok">✓ Case Solved</div><div class="end-icon">🎉</div><h2 class="end-h">${e.correct.headline}</h2><div class="end-div"></div><p class="end-txt">${e.correct.text}</p><div class="end-reveal"><div class="end-rtl">The Full Truth</div><div class="end-rtxt">${e.correct.reveal.replace(/\n\n/g,'<br><br>')}</div></div><button class="btn-replay" onclick="goHome()">← Back to Cases</button>`;
+  } else {
+    body.innerHTML=`<div class="end-verdict fail">✗ Wrong Accusation</div><div class="end-icon">🕯️</div><h2 class="end-h">${e.wrong.headline}</h2><div class="end-div"></div><p class="end-txt">You accused <em>${suspect.name}</em> — ${motive.text.toLowerCase()}. The real killer is still out there.</p><div class="end-reveal"><div class="end-rtl">What You Missed</div><div class="end-rtxt">${e.wrong.reveal.replace(/\n\n/g,'<br><br>')}</div></div><button class="btn-replay" onclick="openModeSelect('${G.currentCase}')">Try Again →</button><br><br><button class="btn-replay" onclick="goHome()" style="border-color:var(--smoke);color:var(--smoke)">← Cases</button>`;
+  }
+}
+
+function goHome(){
+  stopAmbient();stopFootsteps();stopAdv();
+  G.currentCase=null;G.currentScene=null;G.collectedClues=[];G.visitedScenes=[];G.accusedSuspect=null;G.accusedMotive=null;
+  showPanel('home');
+}
+
+// ════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════
+let toastT;
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent='🔍 '+msg;t.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════
+loadState();
+renderHome();
+document.addEventListener('click',resumeAC,{once:true});
+</script>
+</body>
+</html>
