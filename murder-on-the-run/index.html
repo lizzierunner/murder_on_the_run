@@ -152,6 +152,9 @@ html,body{height:100%;background:var(--ink);color:var(--parchment);font-family:v
 #toast.show{transform:translateX(-50%) translateY(0)}
 #snd-btn{position:fixed;top:10px;right:12px;z-index:500;background:rgba(14,11,15,.7);border:1px solid rgba(212,170,26,.2);color:var(--mist);font-size:18px;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
 #snd-btn:hover{border-color:var(--gold);color:var(--gold)}
+#narr-btn{position:fixed;top:10px;right:56px;z-index:500;background:rgba(14,11,15,.7);border:1px solid rgba(212,170,26,.2);color:var(--gold);font-size:16px;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+#narr-btn:hover{border-color:var(--gold)}
+#narr-btn.off{opacity:.45;color:var(--mist)}
 /* HOME REDESIGN — "Welcome, Detective" case-file (parchment) */
 #screen-home{background:#efe4c6;color:#3a2c1a;overflow-y:auto;background-image:radial-gradient(rgba(120,90,40,.07) 1px,transparent 1px);background-size:15px 15px}
 .home2{padding:46px 20px calc(44px + env(safe-area-inset-bottom));max-width:660px;margin:0 auto;width:100%}
@@ -269,32 +272,12 @@ html,body{height:100%;background:var(--ink);color:var(--parchment);font-family:v
 .record-bar:hover{border-color:#b8901a;background:#f7f0dd}
 .record-bar span:first-child{font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#7a1e1e;font-size:13px}
 .record-bar span:last-child{color:#6a5638;font-size:13px}
-/* NARRATION BUTTON */
-#nar-btn{position:fixed;top:10px;right:54px;z-index:500;background:rgba(14,11,15,.7);border:1px solid rgba(212,170,26,.2);color:var(--mist);font-size:16px;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
-#nar-btn:hover{border-color:var(--gold);color:var(--gold)}
-#nar-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(212,170,26,.12)}
-/* RUN STATS on ending */
-.end-stats{display:flex;gap:10px;justify-content:center;width:100%;max-width:420px;margin-bottom:22px}
-.end-stat{flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(212,170,26,.2);border-radius:8px;padding:13px 6px;text-align:center}
-.end-stat-val{font-family:var(--sans);font-size:20px;font-weight:700;color:var(--gold);line-height:1}
-.end-stat-lbl{font-family:var(--sans);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--smoke);margin-top:5px}
-/* RESUME CARD */
-.resume-card{width:100%;background:#f4ecd6;border:2px solid #b8901a;border-radius:11px;padding:14px 16px;margin:0 0 14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .18s;box-shadow:0 3px 12px rgba(184,144,26,.15);animation:fadeUp .35s ease;text-align:left}
-.resume-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(184,144,26,.25)}
-.resume-ico{font-size:26px;flex-shrink:0}
-.resume-info{flex:1}
-.resume-label{font-family:var(--sans);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#7a1e1e;margin-bottom:3px}
-.resume-title{font-family:var(--serif);font-size:17px;font-weight:700;color:#2b2018;line-height:1.15;margin-bottom:2px}
-.resume-meta{font-family:var(--sans);font-size:11px;color:#6a5638}
-/* SHARE BUTTON */
-.btn-share{display:block;width:calc(100% - 28px);margin:0 14px 12px;font-family:var(--sans);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);background:transparent;border:1px solid var(--teal);padding:14px;cursor:pointer;transition:all .2s;border-radius:6px}
-.btn-share:hover{background:rgba(42,144,144,.1)}
 </style>
 </head>
 <body>
 <div id="app">
-<button id="nar-btn" onclick="toggleNarrate()" title="Read scenes aloud">🔈</button>
 <button id="snd-btn" onclick="toggleSound()">🔊</button>
+<button id="narr-btn" onclick="toggleNarration()">🎙️</button>
 
 <div id="screen-home" class="screen active">
   <div class="home2">
@@ -323,7 +306,6 @@ html,body{height:100%;background:var(--ink);color:var(--parchment);font-family:v
       </div>
     </div>
 
-    <div id="resume-slot"></div>
     <div class="begin-div"><span>Begin Investigation</span></div>
     <div class="pcases" id="cases-list"></div>
 
@@ -443,6 +425,59 @@ function toggleSound(){
   if(!soundOn&&footInt){clearInterval(footInt);footInt=null;}
 }
 
+// ════════════════════════════════════════════════
+// VOICE NARRATION (Web Speech API) — audio-first, eyes-up
+// ════════════════════════════════════════════════
+let narrationOn=true;
+try{const _np=localStorage.getItem('motr_narr');if(_np!=null)narrationOn=(_np==='1');}catch(e){}
+let _voices=[];
+function loadVoices(){try{_voices=window.speechSynthesis.getVoices()||[];}catch(e){_voices=[];}}
+if('speechSynthesis'in window){loadVoices();try{window.speechSynthesis.onvoiceschanged=loadVoices;}catch(e){}}
+function pickVoice(kind){
+  if(!_voices.length)loadVoices();
+  const en=_voices.filter(v=>/en(-|_|$)/i.test(v.lang));
+  const pool=en.length?en:_voices;
+  if(!pool.length)return null;
+  if(kind==='narrator')return pool.find(v=>/Google US English|Samantha|Daniel|Microsoft (Aria|Guy|David|Zira)|English/i.test(v.name))||pool[0];
+  return pool.length>1?pool[1]:pool[0];
+}
+function hashStr(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h;}
+function speakOne(text,o){
+  o=o||{};if(!('speechSynthesis'in window)||!text)return;
+  const u=new SpeechSynthesisUtterance(String(text).replace(/<[^>]+>/g,''));
+  try{if(o.voice)u.voice=o.voice;}catch(e){}
+  u.rate=o.rate||1;u.pitch=(o.pitch==null?1:o.pitch);u.volume=1;
+  try{window.speechSynthesis.speak(u);}catch(e){}
+}
+function stopSpeak(){if('speechSynthesis'in window){try{window.speechSynthesis.cancel();}catch(e){}}}
+function speakScene(scene,cd){
+  if(!narrationOn||!('speechSynthesis'in window)||!scene)return;
+  stopSpeak();
+  const nar=pickVoice('narrator'), chr=pickVoice('character');
+  const rate=Math.max(.8,Math.min(1.3,(G.mode==='pursuit'?1.06:1)*(1+(currentEffort()-1)*0.12)));
+  speakOne(scene.title,{voice:nar,rate:rate,pitch:1});
+  let spk=null;
+  scene.text.forEach(b=>{
+    if(b.t==='p')speakOne(b.c,{voice:nar,rate:rate,pitch:1});
+    else if(b.t==='sp')spk=b.c;
+    else if(b.t==='q'){
+      if(spk)speakOne(spk+':',{voice:nar,rate:rate,pitch:1});
+      const h=hashStr(spk||'x');
+      speakOne(b.c,{voice:chr,rate:rate*(0.96+((h>>3)%5)*0.02),pitch:0.82+(h%8)*0.05});
+      spk=null;
+    }
+    else if(b.t==='clue'){const cl=cd.clues[b.id];if(cl)speakOne('Evidence found. '+cl.name+'. '+cl.desc,{voice:nar,rate:rate,pitch:1.05});}
+  });
+}
+function toggleNarration(){
+  narrationOn=!narrationOn;
+  try{localStorage.setItem('motr_narr',narrationOn?'1':'0');}catch(e){}
+  const btn=document.getElementById('narr-btn');if(btn){btn.textContent=narrationOn?'🎙️':'🔈';btn.classList.toggle('off',!narrationOn);}
+  if(!narrationOn){stopSpeak();showToast('🔈 Narration off');}
+  else{showToast('🎙️ Narration on');const cd=CASES[G.currentCase];const sc=cd&&cd.scenes&&cd.scenes[G.currentScene];if(sc&&sc.text)speakScene(sc,cd);}
+}
+
+
 function tone(freq,type,dur,vol,delay=0){
   if(!soundOn)return;resumeAC();
   const o=AC.createOscillator(),g=AC.createGain();
@@ -513,115 +548,6 @@ function startAmbient(mood){
 function stopAmbient(){
   ambNodes.forEach(n=>{try{n.stop?n.stop():n.gain&&n.gain.setTargetAtTime(0,AC.currentTime,.5)}catch(e){}});
   ambNodes=[];
-}
-
-// ════════════════════════════════════════════════
-// HAPTICS
-// ════════════════════════════════════════════════
-function haptic(pattern){try{if(navigator.vibrate)navigator.vibrate(pattern);}catch(e){}}
-
-// ════════════════════════════════════════════════
-// NARRATION (Web Speech API)
-// ════════════════════════════════════════════════
-let narrateOn=false;
-const SYNTH=window.speechSynthesis;
-
-function toggleNarrate(){
-  narrateOn=!narrateOn;
-  const btn=document.getElementById('nar-btn');
-  if(btn){btn.textContent=narrateOn?'🎙️':'🔈';btn.classList.toggle('active',narrateOn);}
-  if(!narrateOn&&SYNTH)SYNTH.cancel();
-}
-
-function stopNarrate(){if(SYNTH)SYNTH.cancel();}
-
-function getNarrateVoice(){
-  const v=SYNTH?SYNTH.getVoices():[];
-  return v.find(x=>x.lang==='en-GB'&&/daniel|kate|oliver/i.test(x.name))
-      ||v.find(x=>x.lang==='en-GB')
-      ||v.find(x=>x.lang.startsWith('en'))
-      ||null;
-}
-
-function narrateScene(scene){
-  if(!narrateOn||!SYNTH)return;
-  SYNTH.cancel();
-  const cd=CASES[G.currentCase];
-  const parts=[];
-  scene.text.forEach(b=>{
-    if(b.t==='p')parts.push(b.c.replace(/<[^>]+>/g,''));
-    else if(b.t==='sp')parts.push(b.c+' said:');
-    else if(b.t==='q')parts.push('"'+b.c+'"');
-    else if(b.t==='clue'){const cl=cd&&cd.clues[b.id];if(cl)parts.push('Evidence collected: '+cl.name+'. '+cl.desc);}
-  });
-  const utt=new SpeechSynthesisUtterance(parts.join(' '));
-  utt.rate=0.9;utt.pitch=1.0;
-  const speak=()=>{const vo=getNarrateVoice();if(vo)utt.voice=vo;SYNTH.speak(utt);};
-  if(SYNTH.getVoices().length===0){SYNTH.addEventListener('voiceschanged',speak,{once:true});}
-  else{speak();}
-}
-
-// ════════════════════════════════════════════════
-// PROGRESS SAVE / RESUME
-// ════════════════════════════════════════════════
-function saveProgress(){
-  if(!G.currentCase||!G.currentScene)return;
-  const cd=CASES[G.currentCase];if(!cd)return;
-  const suspects={};
-  Object.entries(cd.suspects).forEach(([id,s])=>{suspects[id]={suspicion:s.suspicion,secretOn:s.secretOn};});
-  try{localStorage.setItem('motr2-prog',JSON.stringify({
-    currentCase:G.currentCase,currentScene:G.currentScene,
-    collectedClues:G.collectedClues,visitedScenes:G.visitedScenes,
-    mode:G.mode,links:G.links,boardRevealed:G.boardRevealed,
-    suspects,runStart:G.runStart,distanceM:G.distanceM
-  }));}catch(e){}
-}
-
-function clearProgress(){try{localStorage.removeItem('motr2-prog');}catch(e){}}
-
-function loadProgress(){try{const s=localStorage.getItem('motr2-prog');return s?JSON.parse(s):null;}catch(e){return null;}}
-
-function resumeCase(prog){
-  resumeAC();
-  const cd=CASES[prog.currentCase];if(!cd)return;
-  G.mode=prog.mode||'investigation';
-  G.currentCase=prog.currentCase;G.collectedClues=prog.collectedClues||[];G.visitedScenes=prog.visitedScenes||[];
-  G.accusedSuspect=null;G.accusedMotive=null;G.caseWrong=false;
-  G.links=prog.links||{};G.boardRevealed=prog.boardRevealed||false;boardSel=null;
-  G.runStart=prog.runStart||Date.now();G.distanceM=prog.distanceM||0;
-  Object.values(cd.suspects).forEach(s=>{if(s.sus0===undefined)s.sus0=s.suspicion;});
-  if(prog.suspects)Object.entries(prog.suspects).forEach(([id,s])=>{if(cd.suspects[id]){cd.suspects[id].suspicion=s.suspicion;cd.suspects[id].secretOn=s.secretOn;}});
-  document.getElementById('clue-count').textContent=G.collectedClues.length;
-  document.getElementById('hud-case-lbl').textContent=cd.subtitle;
-  const hm=document.getElementById('hud-mode');if(hm)hm.textContent=G.mode==='pursuit'?'🏃 Pursuit':'🚶 Investigation';
-  if(G.mode==='pursuit')startPace();else stopPace();
-  showPanel('run');startAmbient(cd.ambient);startFootsteps(G.mode==='pursuit'?330:520);
-  loadScene(prog.currentScene);
-}
-
-// ════════════════════════════════════════════════
-// RUN STATS
-// ════════════════════════════════════════════════
-function runStats(){
-  const elapsed=G.runStart?Math.floor((Date.now()-G.runStart)/1000):0;
-  const m=Math.floor(elapsed/60),s=elapsed%60;
-  const timeStr=m>0?m+'m\u202f'+String(s).padStart(2,'0')+'s':(elapsed>0?elapsed+'s':'—');
-  const mi=G.distanceM/1609.34;
-  const distStr=G.distanceM>80?mi.toFixed(1)+' mi':'—';
-  const cd=CASES[G.currentCase];
-  const total=cd?Object.keys(cd.clues).length:0;
-  return{timeStr,distStr,clueStr:G.collectedClues.length+'/'+total};
-}
-
-// ════════════════════════════════════════════════
-// SHARE
-// ════════════════════════════════════════════════
-function shareResult(){
-  const cd=CASES[G.currentCase];if(!cd)return;
-  const st=runStats();
-  const txt='Case solved! \u201c'+cd.title+'\u201d \u2014 '+st.timeStr+' \u00b7 '+st.clueStr+' clues \u00b7 Murder on the Run \ud83d\udd0d';
-  if(navigator.share){navigator.share({title:'Murder on the Run',text:txt,url:location.href}).catch(()=>{});}
-  else if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>showToast('Copied to clipboard')).catch(()=>showToast('Share unavailable'));}
 }
 
 // ════════════════════════════════════════════════
@@ -1114,7 +1040,7 @@ const CASES={ashwick:CASE1,dunmore:CASE2};
 // ════════════════════════════════════════════════
 // GAME STATE
 // ════════════════════════════════════════════════
-let G={currentCase:null,currentScene:null,collectedClues:[],visitedScenes:[],accusedSuspect:null,accusedMotive:null,solvedCases:[],meta:{totalSolved:0,weekKey:'',weekCount:0,achievements:{}},mode:'investigation',caseWrong:false,links:{},boardRevealed:false,runStart:null,distanceM:0};
+let G={currentCase:null,currentScene:null,collectedClues:[],visitedScenes:[],accusedSuspect:null,accusedMotive:null,solvedCases:[],meta:{totalSolved:0,weekKey:'',weekCount:0,achievements:{}},mode:'investigation',caseWrong:false,links:{},boardRevealed:false};
 let advTimer=null,advSecs=0,advTotal=0,boardSel=null;
 // live-pace state for GPS-linked Pursuit
 G.pace={active:false,effort:1,speed:0,samples:[],watchId:null,lastPos:null};
@@ -1165,7 +1091,7 @@ function showPanel(name){
 // HOME
 // ════════════════════════════════════════════════
 function renderHome(){
-  stopAdv();stopFootsteps();stopAmbient();
+  stopAdv();stopFootsteps();stopAmbient();stopSpeak();
   ensureWeek();
   // meta: level, rank, weekly investigation
   const {lvl,name}=rankFor(G.meta.totalSolved||0);
@@ -1184,8 +1110,6 @@ function renderHome(){
   const disp=[{icon:'📍',cls:'navy',sub:'A locked-room mystery'},{icon:'▶',cls:'maroon',sub:'A poisoning at the party'}];
   const list=document.getElementById('cases-list');
   list.innerHTML='';
-  const rs=document.getElementById('resume-slot');
-  if(rs){rs.innerHTML='';const prog=loadProgress();if(prog&&prog.currentCase&&prog.currentScene&&CASES[prog.currentCase]){const pc=CASES[prog.currentCase];const elapsed=prog.runStart?Math.floor((Date.now()-prog.runStart)/60000):0;const rc2=document.createElement('button');rc2.className='resume-card';rc2.innerHTML=`<span class="resume-ico">▶️</span><div class="resume-info"><div class="resume-label">Case In Progress</div><div class="resume-title">${pc.title}</div><div class="resume-meta">${prog.collectedClues.length} clue${prog.collectedClues.length!==1?'s':''} collected · ${elapsed>0?elapsed+'m elapsed':'Just started'}</div></div><span style="color:#b8901a;font-size:22px">›</span>`;rc2.onclick=()=>resumeCase(prog);rs.appendChild(rc2);}}
   [CASE1,CASE2].forEach((c,i)=>{
     const solved=G.solvedCases.includes(c.id);
     const locked=i===1&&!G.solvedCases.includes(CASE1.id);
@@ -1226,7 +1150,6 @@ function startCase(caseId,mode){
   G.mode=mode||'investigation';
   G.currentCase=caseId;G.collectedClues=[];G.visitedScenes=[];G.accusedSuspect=null;G.accusedMotive=null;
   G.caseWrong=false;G.links={};G.boardRevealed=false;boardSel=null;
-  G.runStart=Date.now();G.distanceM=0;
   const cd=CASES[caseId];
   Object.values(cd.suspects).forEach(s=>{if(s.sus0===undefined)s.sus0=s.suspicion;s.suspicion=s.sus0;s.secretOn=false;});
   document.getElementById('clue-count').textContent='0';
@@ -1269,7 +1192,7 @@ function loadScene(sceneId){
       if(!G.collectedClues.includes(cid)){
         G.collectedClues.push(cid);
         showToast(cd.clues[cid].name);
-        sfxChime();haptic([40,20,80,20,40]);
+        sfxChime();
       }
     });
     document.getElementById('clue-count').textContent=G.collectedClues.length;
@@ -1295,8 +1218,8 @@ function loadScene(sceneId){
       content.appendChild(card);
     }
   });
-  saveProgress();narrateScene(scene);
   content.scrollTop=0;
+  speakScene(scene,cd);
 
   const wrap=document.getElementById('choices-wrap');
   wrap.innerHTML='';
@@ -1304,13 +1227,17 @@ function loadScene(sceneId){
   valid.forEach(choice=>{
     const btn=document.createElement('button');btn.className='choice-big';
     btn.innerHTML=`<span class="carrow">›</span><span>${choice.tag?`<span class="ctag">${choice.tag}</span>`:''}${choice.text}</span>`;
-    btn.addEventListener('click',()=>{stopNarrate();sfxTick();stopAdv();choice.next==='accuse'?showPanel('accuse'):loadScene(choice.next);});
+    btn.addEventListener('click',()=>{sfxTick();stopAdv();stopSpeak();choice.next==='accuse'?showPanel('accuse'):loadScene(choice.next);});
     wrap.appendChild(btn);
   });
 
   if(valid.length>0){
     const pursuit=G.mode==='pursuit';
-    const secs=(pursuit?8:14)+valid.length*(pursuit?2:3);
+    let secs=(pursuit?8:14)+valid.length*(pursuit?2:3);
+    if(narrationOn&&'speechSynthesis'in window&&!pursuit){
+      const words=scene.text.filter(b=>b.t==='p'||b.t==='q').reduce((n,b)=>n+(b.c?String(b.c).split(/\s+/).length:0),0);
+      secs=Math.max(secs,Math.ceil(words/2.5)+4);
+    }
     startAdv(secs,()=>{sfxTick();valid[0].next==='accuse'?showPanel('accuse'):loadScene(valid[0].next);});
   }
 }
@@ -1335,10 +1262,8 @@ function stopPace(){
 }
 function onPos(p){
   let spd=p.coords.speed;
-  if(G.pace.lastPos){
-    const d=haversine(G.pace.lastPos.lat,G.pace.lastPos.lng,p.coords.latitude,p.coords.longitude);
-    const dt=(p.timestamp-G.pace.lastPos.t)/1000;
-    if(dt>0){if(spd==null||isNaN(spd))spd=d/dt;if(d<200)G.distanceM+=d;}
+  if(spd==null||isNaN(spd)){
+    if(G.pace.lastPos){const d=haversine(G.pace.lastPos.lat,G.pace.lastPos.lng,p.coords.latitude,p.coords.longitude);const dt=(p.timestamp-G.pace.lastPos.t)/1000;if(dt>0)spd=d/dt;}
   }
   G.pace.lastPos={lat:p.coords.latitude,lng:p.coords.longitude,t:p.timestamp};
   if(spd==null||isNaN(spd)||spd<0)spd=0;
@@ -1520,18 +1445,18 @@ function submitAccusation(){
     G.meta.totalSolved=(G.meta.totalSolved||0)+1;
     G.meta.weekCount=(G.meta.weekCount||0)+1;
     earned=grantAchievements(cd);
-    saveState();clearProgress();
+    saveState();
   } else { G.caseWrong=true; }
   showEnding(correct,earned);
-  if(correct){[523,659,783,1046,1318].forEach((f,i)=>tone(f,'sine',.9,.1,i*.12));haptic([100,50,100,50,300]);}
-  else{[220,196,174].forEach((f,i)=>tone(f,'sawtooth',.6,.08,i*.15));haptic([200,100,400]);}
+  if(correct){[523,659,783,1046,1318].forEach((f,i)=>tone(f,'sine',.9,.1,i*.12));}
+  else{[220,196,174].forEach((f,i)=>tone(f,'sawtooth',.6,.08,i*.15));}
 }
 
 // ════════════════════════════════════════════════
 // ENDING
 // ════════════════════════════════════════════════
 function showEnding(correct,earned){
-  showPanel('ending');stopAmbient();stopFootsteps();stopPace();stopNarrate();
+  showPanel('ending');stopAmbient();stopFootsteps();stopPace();stopSpeak();
   const cd=CASES[G.currentCase];
   const suspect=cd.suspects[G.accusedSuspect];
   const motive=cd.motives.find(m=>m.id===G.accusedMotive);
@@ -1539,17 +1464,14 @@ function showEnding(correct,earned){
   const body=document.getElementById('ending-body');
   if(correct){
     const commend=(earned&&earned.length)?`<div class="end-commend"><div class="end-commend-t">🎖️ Commendations Earned</div>${earned.map(a=>`<div class="end-commend-i"><span class="ci2">${a.icon}</span><span>${a.name}<small>${a.desc}</small></span></div>`).join('')}</div>`:'';
-    const st=runStats();
-    const statsHtml=`<div class="end-stats"><div class="end-stat"><div class="end-stat-val">${st.timeStr}</div><div class="end-stat-lbl">Time</div></div><div class="end-stat"><div class="end-stat-val">${st.distStr}</div><div class="end-stat-lbl">Distance</div></div><div class="end-stat"><div class="end-stat-val">${st.clueStr}</div><div class="end-stat-lbl">Clues Found</div></div></div>`;
-    const shareBtn=(navigator.share||navigator.clipboard)?`<button class="btn-share" onclick="shareResult()">📤 Share Your Verdict</button>`:'';
-    body.innerHTML=`<div class="end-verdict ok">✓ Case Solved</div><div class="end-icon">🎉</div><h2 class="end-h">${e.correct.headline}</h2><div class="end-div"></div>${statsHtml}<p class="end-txt">${e.correct.text}</p><div class="end-reveal"><div class="end-rtl">The Full Truth</div><div class="end-rtxt">${e.correct.reveal.replace(/\n\n/g,'<br><br>')}</div></div>${commend}${shareBtn}<button class="btn-replay" onclick="goHome()">← Back to Cases</button>`;
+    body.innerHTML=`<div class="end-verdict ok">✓ Case Solved</div><div class="end-icon">🎉</div><h2 class="end-h">${e.correct.headline}</h2><div class="end-div"></div><p class="end-txt">${e.correct.text}</p><div class="end-reveal"><div class="end-rtl">The Full Truth</div><div class="end-rtxt">${e.correct.reveal.replace(/\n\n/g,'<br><br>')}</div></div>${commend}<button class="btn-replay" onclick="goHome()">← Back to Cases</button>`;
   } else {
     body.innerHTML=`<div class="end-verdict fail">✗ Wrong Accusation</div><div class="end-icon">🕯️</div><h2 class="end-h">${e.wrong.headline}</h2><div class="end-div"></div><p class="end-txt">You accused <em>${suspect.name}</em> — ${motive.text.toLowerCase()}. The real killer is still out there.</p><div class="end-reveal"><div class="end-rtl">What You Missed</div><div class="end-rtxt">${e.wrong.reveal.replace(/\n\n/g,'<br><br>')}</div></div><button class="btn-replay" onclick="openModeSelect('${G.currentCase}')">Try Again →</button><br><br><button class="btn-replay" onclick="goHome()" style="border-color:var(--smoke);color:var(--smoke)">← Cases</button>`;
   }
 }
 
 function goHome(){
-  stopAmbient();stopFootsteps();stopAdv();stopPace();stopNarrate();clearProgress();
+  stopAmbient();stopFootsteps();stopAdv();stopPace();stopSpeak();
   G.currentCase=null;G.currentScene=null;G.collectedClues=[];G.visitedScenes=[];G.accusedSuspect=null;G.accusedMotive=null;
   showPanel('home');
 }
@@ -1567,6 +1489,7 @@ function showToast(msg){
 // INIT
 // ════════════════════════════════════════════════
 loadState();
+(function(){const nb=document.getElementById('narr-btn');if(nb){nb.textContent=narrationOn?'🎙️':'🔈';nb.classList.toggle('off',!narrationOn);}})();
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('service-worker.js').then(()=>console.log('🔎 Service Worker registered')).catch(err=>console.log('SW error:',err));});}
 renderHome();
 document.addEventListener('click',resumeAC,{once:true});
